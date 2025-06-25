@@ -1,0 +1,311 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Synchrony Financial Theme Variables */
+:root {
+  /* Synchrony Brand Colors */
+  --synchrony-gold: #FBC600;
+  --charcoal-gray: #3B3C43;
+  --steel-gray: #94969A;
+  --dark-green: #3E8529;
+  --teal: #34657F;
+  --turquoise: #58A7AF;
+  --brick: #C63527;
+  --autumn: #D7BB00;
+  
+  /* Light Theme */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F8F9FA;
+  --bg-tertiary: #F1F3F4;
+  --bg-accent: #FFF9E6;
+  --text-primary: #3B3C43;
+  --text-secondary: #666666;
+  --text-muted: #94969A;
+  --border-light: #E5E7EB;
+  --border-medium: #D1D5DB;
+  --shadow-light: rgba(59, 60, 67, 0.1);
+  --shadow-medium: rgba(59, 60, 67, 0.15);
+  --shadow-heavy: rgba(59, 60, 67, 0.25);
+  
+  /* Status Colors - Light */
+  --success: #3E8529;
+  --warning: #D7BB00;
+  --error: #C63527;
+  --info: #34657F;
+}
+
+.dark {
+  /* Dark Theme */
+  --bg-primary: #1A1A1A;
+  --bg-secondary: #2D2D2D;
+  --bg-tertiary: #404040;
+  --bg-accent: #2A2416;
+  --text-primary: #FFFFFF;
+  --text-secondary: #CCCCCC;
+  --text-muted: #94969A;
+  --border-light: #404040;
+  --border-medium: #525252;
+  --shadow-light: rgba(0, 0, 0, 0.2);
+  --shadow-medium: rgba(0, 0, 0, 0.3);
+  --shadow-heavy: rgba(0, 0, 0, 0.5);
+  
+  /* Status Colors - Dark */
+  --success: #4ADE80;
+  --warning: #FBC600;
+  --error: #EF4444;
+  --info: #58A7AF;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--steel-gray);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--charcoal-gray);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--steel-gray) var(--bg-secondary);
+}
+
+/* Base styles */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom utility classes */
+.bg-synchrony-gold { background-color: var(--synchrony-gold); }
+.bg-charcoal { background-color: var(--charcoal-gray); }
+.bg-steel { background-color: var(--steel-gray); }
+.bg-dark-green { background-color: var(--dark-green); }
+.bg-teal { background-color: var(--teal); }
+.bg-turquoise { background-color: var(--turquoise); }
+.bg-brick { background-color: var(--brick); }
+.bg-autumn { background-color: var(--autumn); }
+
+.text-synchrony-gold { color: var(--synchrony-gold); }
+.text-charcoal { color: var(--charcoal-gray); }
+.text-steel { color: var(--steel-gray); }
+.text-dark-green { color: var(--dark-green); }
+.text-teal { color: var(--teal); }
+.text-turquoise { color: var(--turquoise); }
+.text-brick { color: var(--brick); }
+.text-autumn { color: var(--autumn); }
+
+.border-synchrony-gold { border-color: var(--synchrony-gold); }
+.border-charcoal { border-color: var(--charcoal-gray); }
+.border-steel { border-color: var(--steel-gray); }
+
+/* Theme-aware backgrounds */
+.bg-theme-primary { background-color: var(--bg-primary); }
+.bg-theme-secondary { background-color: var(--bg-secondary); }
+.bg-theme-tertiary { background-color: var(--bg-tertiary); }
+.bg-theme-accent { background-color: var(--bg-accent); }
+
+/* Theme-aware text */
+.text-theme-primary { color: var(--text-primary); }
+.text-theme-secondary { color: var(--text-secondary); }
+.text-theme-muted { color: var(--text-muted); }
+
+/* Theme-aware borders */
+.border-theme-light { border-color: var(--border-light); }
+.border-theme-medium { border-color: var(--border-medium); }
+
+/* Theme-aware shadows */
+.shadow-theme-light { box-shadow: 0 1px 3px var(--shadow-light); }
+.shadow-theme-medium { box-shadow: 0 4px 6px var(--shadow-medium); }
+.shadow-theme-heavy { box-shadow: 0 10px 15px var(--shadow-heavy); }
+
+/* Status colors */
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-error { color: var(--error); }
+.text-info { color: var(--info); }
+
+.bg-success { background-color: var(--success); }
+.bg-warning { background-color: var(--warning); }
+.bg-error { background-color: var(--error); }
+.bg-info { background-color: var(--info); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+.animate-slide-in { animation: slideIn 0.3s ease-out; }
+.animate-pulse { animation: pulse 2s infinite; }
+
+/* Focus styles */
+.focus-synchrony:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(251, 198, 0, 0.3);
+}
+
+/* Hover transitions */
+.transition-synchrony {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Custom button styles */
+.btn-synchrony-primary {
+  background: linear-gradient(135deg, var(--synchrony-gold) 0%, var(--autumn) 100%);
+  color: var(--charcoal-gray);
+  font-weight: 600;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-synchrony-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(251, 198, 0, 0.3);
+}
+
+.btn-synchrony-secondary {
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 2px solid var(--border-medium);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-synchrony-secondary:hover {
+  border-color: var(--synchrony-gold);
+  color: var(--synchrony-gold);
+  background-color: var(--bg-accent);
+}
+
+/* Card styles */
+.card-synchrony {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: var(--shadow-light);
+  transition: all 0.3s ease;
+}
+
+.card-synchrony:hover {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+}
+
+/* Input styles */
+.input-synchrony {
+  background-color: var(--bg-primary);
+  border: 2px solid var(--border-light);
+  color: var(--text-primary);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.input-synchrony:focus {
+  border-color: var(--synchrony-gold);
+  box-shadow: 0 0 0 3px rgba(251, 198, 0, 0.1);
+  outline: none;
+}
+
+.input-synchrony::placeholder {
+  color: var(--text-muted);
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  background-color: rgba(59, 60, 67, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.dark .modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Loading spinner */
+.spinner-synchrony {
+  border: 3px solid var(--border-light);
+  border-top: 3px solid var(--synchrony-gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Gradient backgrounds */
+.gradient-synchrony {
+  /* background: linear-gradient(135deg, var(--synchrony-gold) 0%, var(--autumn) 50%, var(--teal) 100%); */
+  background:  var(--synchrony-gold);
+}
+
+.gradient-synchrony-subtle {
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-accent) 100%);
+}
+
+/* Environment badges */
+.badge-dev { background-color: var(--dark-green); }
+.badge-qa { background-color: var(--teal); }
+.badge-staging { background-color: var(--autumn); }
+.badge-uat { background-color: var(--turquoise); }
+.badge-prod { background-color: var(--brick); }
+
+/* Database type indicators */
+.db-postgresql { color: var(--teal); }
+.db-mysql { color: var(--autumn); }
+.db-oracle { color: var(--brick); }
+
+/* Status indicators */
+.status-connected { color: var(--success); }
+.status-disconnected { color: var(--error); }
+.status-connecting { color: var(--warning); }
+
+/* Responsive design helpers */
+@media (max-width: 768px) {
+  .card-synchrony {
+    border-radius: 8px;
+  }
+  
+  .shadow-theme-medium {
+    box-shadow: 0 2px 4px var(--shadow-light);
+  }
+}
+
+/* Print styles */
+@media print {
+  .bg-theme-primary,
+  .bg-theme-secondary,
+  .bg-theme-tertiary {
+    background-color: white !important;
+  }
+  
+  .text-theme-primary,
+  .text-theme-secondary {
+    color: black !important;
+  }
+}
