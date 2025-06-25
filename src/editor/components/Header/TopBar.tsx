@@ -6,6 +6,9 @@ import {
   ChevronDown,
   X,
   Activity,
+  Database,
+  Home,
+  DatabaseZap,
 } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
 import { DatabaseConnection, SqlTab } from "../../../types/database";
@@ -24,6 +27,7 @@ interface TopBarProps {
   onOpenConnectionManager: () => void;
   queryLimit: number;
   onQueryLimitChange: (limit: number) => void;
+  setActiveView: (view: "connections" | "migration") => void;
 }
 
 const QUERY_LIMITS = [100, 500, 1000, 5000, 10000];
@@ -35,6 +39,7 @@ export function TopBar({
   onTabChange,
   queryLimit,
   onQueryLimitChange,
+  setActiveView,
 }: TopBarProps) {
   const { theme, toggleTheme } = useTheme();
   const [showLimitDropdown, setShowLimitDropdown] = useState(false);
@@ -54,18 +59,24 @@ export function TopBar({
 
   return (
     <div className="h-16 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border-slate-200/60 dark:border-slate-700/60 px-4 sm:px-6 flex items-center justify-between gap-6 shadow-sm border-b-4">
-
+      <button
+        onClick={() => setActiveView("connections")}
+        className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+      >
+        <DatabaseZap size={24} />
+      </button>
       {/* Left: Logo + Tabs */}
       <div className="flex items-center gap-4 flex-1 overflow-hidden ">
         {/* Logo */}
         <img
           src="https://www.synchrony.com/syc/img/2023_synchrony_basic_logo.svg"
           alt="Synchrony Logo"
-          className="h-10 w-auto"
+          className="h-10 w-auto cursor-pointer"
+          onClick={() => setActiveView("connections")}
         />
 
         {/* Tab List */}
-{/* a divider */}
+        {/* a divider */}
         <div className="border-l border-slate-200 dark:border-slate-700 h-10 mx-2" />
 
         <div
@@ -113,7 +124,6 @@ export function TopBar({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-3">
-
         {/* Query Limit Dropdown */}
         <div className="relative">
           <button

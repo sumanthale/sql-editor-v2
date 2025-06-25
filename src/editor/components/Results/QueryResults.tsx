@@ -1,14 +1,9 @@
-import React, { useMemo } from "react";
 import {
-  Download,
-  FileText,
   Database,
   Clock,
   RotateCcw,
   Play,
-  AlertCircle,
   CheckCircle2,
-  TrendingUp,
 } from "lucide-react";
 import { DataTable } from "../DataTable/DataTable";
 import { QueryResult } from "../../../types/database";
@@ -26,61 +21,7 @@ export function QueryResults({
 }: QueryResultsProps) {
   const currentResult = results[0]; // Show the most recent query result
 
-  const exportToCSV = () => {
-    if (!currentResult) return;
 
-    const headers = currentResult.columns.map((col) => col.name);
-    const csvContent = [
-      headers.join(","),
-      ...currentResult.rows.map((row) =>
-        headers
-          .map((header) => {
-            const value = row[header];
-            if (value === null || value === undefined) return "";
-            const stringValue = String(value);
-            return stringValue.includes(",") ||
-              stringValue.includes('"') ||
-              stringValue.includes("\n")
-              ? `"${stringValue.replace(/"/g, '""')}"`
-              : stringValue;
-          })
-          .join(",")
-      ),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `query-results-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportToJSON = () => {
-    if (!currentResult) return;
-
-    const jsonContent = JSON.stringify(
-      {
-        query: currentResult.query,
-        columns: currentResult.columns,
-        rows: currentResult.rows,
-        totalRows: currentResult.totalRows,
-        executionTime: currentResult.executionTime,
-        timestamp: currentResult.timestamp,
-      },
-      null,
-      2
-    );
-
-    const blob = new Blob([jsonContent], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `query-results-${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   if (isLoading) {
     return (
@@ -106,7 +47,6 @@ export function QueryResults({
   return (
     <div className="h-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-t border-slate-200/60 dark:border-slate-700/60 flex flex-col">
       {/* Header */}
-
 
       {/* Results Content */}
       <div className="flex-1 overflow-hidden">
@@ -149,7 +89,7 @@ export function QueryResults({
         ) : (
           <div className="h-full">
             <DataTable
-              data={currentResult.rows}
+              currentResult={currentResult}
               loading={false}
               emptyMessage="No data returned from query"
               pageSize={50}
@@ -164,37 +104,32 @@ export function QueryResults({
       {currentResult && (
         <div className="px-4 py-3 border-t border-slate-200/60 dark:border-slate-700/60 bg-gradient-to-r from-slate-50/80 to-white/80 dark:from-slate-800/80 dark:to-slate-700/80 backdrop-blur-sm flex-shrink-0">
           <div className="flex items-center gap-4">
-            <div className="text-xs text-slate-600 dark:text-slate-400 font-mono truncate max-w-2xl bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg">
+            <div
+              title={currentResult.query}
+              className="text-xs text-slate-600 dark:text-slate-400 font-mono truncate w-[76%] bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg"
+            >
               {currentResult.query}
             </div>
 
-            {currentResult && (
-              <div className="flex items-center gap-4 ml-auto">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
-                  <Database size={14} className="text-blue-500" />
-                  <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                    {currentResult.totalRows} row
-                    {currentResult.totalRows !== 1 ? "s" : ""}
-                  </span>
-                </div>
+            <div className="flex items-center gap-4 ml-auto">
+           
 
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200/50 dark:border-emerald-800/50">
-                  <Clock size={14} className="text-emerald-500" />
-                  <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                    {currentResult.executionTime}ms
-                  </span>
-                </div>
-
-                {lastExecuted && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200/50 dark:border-purple-800/50">
-                    <Play size={14} className="text-purple-500" />
-                    <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
-                      {lastExecuted.toLocaleTimeString()}
-                    </span>
-                  </div>
-                )}
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200/50 dark:border-emerald-800/50">
+                <Clock size={14} className="text-emerald-500" />
+                <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  {currentResult.executionTime}ms
+                </span>
               </div>
-            )}
+
+              {lastExecuted && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200/50 dark:border-purple-800/50">
+                  <Play size={14} className="text-purple-500" />
+                  <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                    {lastExecuted.toLocaleTimeString()}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

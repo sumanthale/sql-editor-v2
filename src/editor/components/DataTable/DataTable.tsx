@@ -1,31 +1,34 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { 
-  X, 
+import React, { useState, useMemo, useCallback, useEffect } from "react";
+import {
+  X,
   Search,
   ArrowUpDown,
   SortAsc,
   SortDesc,
   ChevronLeft,
-  ChevronRight
-} from 'lucide-react';
+  ChevronRight,
+  Database,
+  Download,
+  FileText,
+} from "lucide-react";
 
 export interface Column {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'date' | 'boolean';
+  type: "text" | "number" | "date" | "boolean";
   sortable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
   render?: (value: any, row: any) => React.ReactNode;
 }
 
 export interface SortConfig {
   key: string;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 interface DataTableProps {
-  data: any[];
+  currentResult: any;
   loading?: boolean;
   emptyMessage?: string;
   pageSize?: number;
@@ -36,53 +39,116 @@ interface DataTableProps {
 }
 
 export function DataTable({
-  data,
+  currentResult,
   loading = false,
   emptyMessage = "No data available",
   pageSize = 50,
   showPagination = true,
   onRowClick,
   onSelectionChange,
-  className = ""
+  className = "",
 }: DataTableProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [globalFilter, setGlobalFilter] = useState('');
+  const [globalFilter, setGlobalFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
+  const data = currentResult.rows;
+  const exportToCSV = () => {
+    if (!currentResult) return;
+
+    const headers = currentResult.columns.map((col) => col.name);
+    const csvContent = [
+      headers.join(","),
+      ...currentResult.rows.map((row) =>
+        headers
+          .map((header) => {
+            const value = row[header];
+            if (value === null || value === undefined) return "";
+            const stringValue = String(value);
+            return stringValue.includes(",") ||
+              stringValue.includes('"') ||
+              stringValue.includes("\n")
+              ? `"${stringValue.replace(/"/g, '""')}"`
+              : stringValue;
+          })
+          .join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `query-results-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToJSON = () => {
+    if (!currentResult) return;
+
+    const jsonContent = JSON.stringify(
+      {
+        query: currentResult.query,
+        columns: currentResult.columns,
+        rows: currentResult.rows,
+        totalRows: currentResult.totalRows,
+        executionTime: currentResult.executionTime,
+        timestamp: currentResult.timestamp,
+      },
+      null,
+      2
+    );
+
+    const blob = new Blob([jsonContent], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `query-results-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   // Generate columns dynamically from data
   const columns: Column[] = useMemo(() => {
     if (!data || data.length === 0) return [];
 
     const firstRow = data[0];
-    return Object.keys(firstRow).map(key => {
+    return Object.keys(firstRow).map((key) => {
       const value = firstRow[key];
-      let type: Column['type'] = 'text';
-      
+      let type: Column["type"] = "text";
+
       // Determine column type based on value
-      if (typeof value === 'number') {
-        type = 'number';
-      } else if (typeof value === 'boolean') {
-        type = 'boolean';
-      } else if (value && typeof value === 'string') {
+      if (typeof value === "number") {
+        type = "number";
+      } else if (typeof value === "boolean") {
+        type = "boolean";
+      } else if (value && typeof value === "string") {
         // Check if it looks like a date
-        if (value.match(/^\d{4}-\d{2}-\d{2}/) || value.includes('T') && value.includes('Z')) {
-          type = 'date';
+        if (
+          value.match(/^\d{4}-\d{2}-\d{2}/) ||
+          (value.includes("T") && value.includes("Z"))
+        ) {
+          type = "date";
         }
       }
 
       return {
         key,
-        label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
+        label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
         type,
         sortable: true,
-        align: type === 'number' ? 'right' : 'left',
+        align: type === "number" ? "right" : "left",
         render: (value) => {
           if (value === null || value === undefined) {
-            return <span className="text-slate-400 italic bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-xs">NULL</span>;
+            return (
+              <span className="text-slate-400 italic bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-xs">
+                NULL
+              </span>
+            );
           }
-          
-          if (type === 'date' && value) {
+
+          if (type === "date" && value) {
             try {
               const date = new Date(value);
               return (
@@ -90,7 +156,7 @@ export function DataTable({
                   <div className="text-slate-900 dark:text-slate-100 font-medium">
                     {date.toLocaleDateString()}
                   </div>
-                  {value.includes('T') && (
+                  {value.includes("T") && (
                     <div className="text-xs text-slate-500 dark:text-slate-400">
                       {date.toLocaleTimeString()}
                     </div>
@@ -101,22 +167,29 @@ export function DataTable({
               return <span className="font-mono text-sm">{String(value)}</span>;
             }
           }
-          
-          if (type === 'number') {
-            return <span className="font-mono text-sm font-medium">{Number(value).toLocaleString()}</span>;
-          }
-          
-          if (type === 'boolean') {
+
+          if (type === "number") {
             return (
-              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                value ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-              }`}>
-                {value ? 'TRUE' : 'FALSE'}
+              <span className="font-mono text-sm font-medium">
+                {Number(value).toLocaleString()}
               </span>
             );
           }
-          
+
+          if (type === "boolean") {
+            return (
+              <span
+                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                  value
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                }`}
+              >
+                {value ? "TRUE" : "FALSE"}
+              </span>
+            );
+          }
+
           const stringValue = String(value);
           if (stringValue.length > 50) {
             return (
@@ -127,9 +200,9 @@ export function DataTable({
               </div>
             );
           }
-          
+
           return <span className="font-medium">{stringValue}</span>;
-        }
+        },
       };
     });
   }, [data]);
@@ -138,8 +211,8 @@ export function DataTable({
   const filteredData = useMemo(() => {
     if (!globalFilter) return data;
 
-    return data.filter(row => {
-      return Object.values(row).some(value => {
+    return data.filter((row) => {
+      return Object.values(row).some((value) => {
         if (value === null || value === undefined) return false;
         return String(value).toLowerCase().includes(globalFilter.toLowerCase());
       });
@@ -153,25 +226,25 @@ export function DataTable({
     return [...filteredData].sort((a, b) => {
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
-      
+
       let comparison = 0;
-      
+
       if (aValue === null || aValue === undefined) comparison = 1;
       else if (bValue === null || bValue === undefined) comparison = -1;
-      else if (typeof aValue === 'number' && typeof bValue === 'number') {
+      else if (typeof aValue === "number" && typeof bValue === "number") {
         comparison = aValue - bValue;
       } else {
         comparison = String(aValue).localeCompare(String(bValue));
       }
 
-      return sortConfig.direction === 'desc' ? -comparison : comparison;
+      return sortConfig.direction === "desc" ? -comparison : comparison;
     });
   }, [filteredData, sortConfig]);
 
   // Paginate sorted data
   const paginatedData = useMemo(() => {
     if (!showPagination) return sortedData;
-    
+
     const startIndex = (currentPage - 1) * pageSize;
     return sortedData.slice(startIndex, startIndex + pageSize);
   }, [sortedData, currentPage, pageSize, showPagination]);
@@ -180,49 +253,56 @@ export function DataTable({
 
   // Handle sorting
   const handleSort = useCallback((columnKey: string) => {
-    setSortConfig(prev => {
+    setSortConfig((prev) => {
       if (prev?.key === columnKey) {
-        if (prev.direction === 'asc') {
-          return { key: columnKey, direction: 'desc' };
+        if (prev.direction === "asc") {
+          return { key: columnKey, direction: "desc" };
         } else {
           return null; // Remove sort
         }
       } else {
-        return { key: columnKey, direction: 'asc' };
+        return { key: columnKey, direction: "asc" };
       }
     });
   }, []);
 
   // Handle row selection
-  const handleRowSelection = useCallback((rowId: string, isSelected: boolean) => {
-    setSelectedRows(prev => {
-      const newSelection = new Set(prev);
-      if (isSelected) {
-        newSelection.add(rowId);
-      } else {
-        newSelection.delete(rowId);
-      }
-      
-      if (onSelectionChange) {
-        const selectedData = data.filter((row, index) => newSelection.has(String(index)));
-        onSelectionChange(selectedData);
-      }
-      
-      return newSelection;
-    });
-  }, [data, onSelectionChange]);
+  const handleRowSelection = useCallback(
+    (rowId: string, isSelected: boolean) => {
+      setSelectedRows((prev) => {
+        const newSelection = new Set(prev);
+        if (isSelected) {
+          newSelection.add(rowId);
+        } else {
+          newSelection.delete(rowId);
+        }
+
+        if (onSelectionChange) {
+          const selectedData = data.filter((row, index) =>
+            newSelection.has(String(index))
+          );
+          onSelectionChange(selectedData);
+        }
+
+        return newSelection;
+      });
+    },
+    [data, onSelectionChange]
+  );
 
   // Select all rows
   const handleSelectAll = useCallback(() => {
-    const allIds = paginatedData.map((_, index) => String((currentPage - 1) * pageSize + index));
-    const isAllSelected = allIds.every(id => selectedRows.has(id));
-    
-    setSelectedRows(prev => {
+    const allIds = paginatedData.map((_, index) =>
+      String((currentPage - 1) * pageSize + index)
+    );
+    const isAllSelected = allIds.every((id) => selectedRows.has(id));
+
+    setSelectedRows((prev) => {
       const newSelection = new Set(prev);
       if (isAllSelected) {
-        allIds.forEach(id => newSelection.delete(id));
+        allIds.forEach((id) => newSelection.delete(id));
       } else {
-        allIds.forEach(id => newSelection.add(id));
+        allIds.forEach((id) => newSelection.add(id));
       }
       return newSelection;
     });
@@ -231,12 +311,19 @@ export function DataTable({
   // Get sort indicator for column
   const getSortIndicator = (columnKey: string) => {
     if (!sortConfig || sortConfig.key !== columnKey) {
-      return <ArrowUpDown size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />;
+      return (
+        <ArrowUpDown
+          size={14}
+          className="opacity-0 group-hover:opacity-50 transition-opacity"
+        />
+      );
     }
-    
-    return sortConfig.direction === 'asc' 
-      ? <SortAsc size={14} className="text-blue-600 dark:text-blue-400" />
-      : <SortDesc size={14} className="text-blue-600 dark:text-blue-400" />;
+
+    return sortConfig.direction === "asc" ? (
+      <SortAsc size={14} className="text-blue-600 dark:text-blue-400" />
+    ) : (
+      <SortDesc size={14} className="text-blue-600 dark:text-blue-400" />
+    );
   };
 
   // Reset page when data changes
@@ -246,11 +333,15 @@ export function DataTable({
 
   if (loading) {
     return (
-      <div className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-700/60 ${className}`}>
+      <div
+        className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-700/60 ${className}`}
+      >
         <div className="flex items-center justify-center h-64">
           <div className="flex items-center gap-3">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span className="text-slate-600 dark:text-slate-400">Loading data...</span>
+            <span className="text-slate-600 dark:text-slate-400">
+              Loading data...
+            </span>
           </div>
         </div>
       </div>
@@ -258,7 +349,9 @@ export function DataTable({
   }
 
   return (
-    <div className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-lg flex flex-col h-full ${className}`}>
+    <div
+      className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-lg flex flex-col h-full ${className}`}
+    >
       {/* Header Controls */}
       <div className="p-4 border-b border-slate-200/60 dark:border-slate-700/60 bg-gradient-to-r from-slate-50/80 to-white/80 dark:from-slate-800/80 dark:to-slate-700/80 backdrop-blur-sm rounded-t-xl flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -267,15 +360,45 @@ export function DataTable({
               Query Results
             </h3>
             <span className="text-sm text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full font-medium">
-              {sortedData.length} row{sortedData.length !== 1 ? 's' : ''}
+              {sortedData.length} row{sortedData.length !== 1 ? "s" : ""}
               {globalFilter && ` (filtered from ${data.length})`}
             </span>
+
+            
+
+            <button
+              onClick={exportToCSV}
+              className="flex items-center gap-1 px-2 py-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-200/60 dark:border-slate-600/60 hover:bg-slate-200 dark:hover:bg-slate-600 transition text-xs text-slate-700 dark:text-slate-300"
+              title="Export as CSV"
+            >
+              <Download size={14} className="text-blue-500" />
+              CSV
+            </button>
+            <button
+              onClick={exportToJSON}
+              className="flex items-center gap-1 px-2 py-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-200/60 dark:border-slate-600/60 hover:bg-slate-200 dark:hover:bg-slate-600 transition text-xs text-slate-700 dark:text-slate-300"
+              title="Export as JSON"
+            >
+              <FileText size={14} className="text-green-500" />
+              JSON
+            </button>
+
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
+              <Database size={14} className="text-blue-500" />
+              <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                {currentResult.totalRows} row
+                {currentResult.totalRows !== 1 ? "s" : ""}
+              </span>
+            </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* Global Search */}
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
               <input
                 type="text"
                 placeholder="Search all columns..."
@@ -285,7 +408,7 @@ export function DataTable({
               />
               {globalFilter && (
                 <button
-                  onClick={() => setGlobalFilter('')}
+                  onClick={() => setGlobalFilter("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                 >
                   <X size={14} />
@@ -302,10 +425,12 @@ export function DataTable({
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <Search size={48} className="mx-auto mb-4 text-slate-400" />
-              <p className="text-slate-500 dark:text-slate-400">{emptyMessage}</p>
+              <p className="text-slate-500 dark:text-slate-400">
+                {emptyMessage}
+              </p>
               {globalFilter && (
                 <button
-                  onClick={() => setGlobalFilter('')}
+                  onClick={() => setGlobalFilter("")}
                   className="mt-2 text-blue-600 dark:text-blue-400 hover:underline text-sm"
                 >
                   Clear search to see all data
@@ -321,29 +446,44 @@ export function DataTable({
                   <th className="w-12 px-4 py-3">
                     <input
                       type="checkbox"
-                      checked={paginatedData.length > 0 && paginatedData.every((_, index) => 
-                        selectedRows.has(String((currentPage - 1) * pageSize + index))
-                      )}
+                      checked={
+                        paginatedData.length > 0 &&
+                        paginatedData.every((_, index) =>
+                          selectedRows.has(
+                            String((currentPage - 1) * pageSize + index)
+                          )
+                        )
+                      }
                       onChange={handleSelectAll}
                       className="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
                     />
                   </th>
                 )}
-                {columns.map(column => (
+                {columns.map((column) => (
                   <th
                     key={column.key}
                     className={`px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider ${
-                      column.sortable !== false ? 'cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-600/50 group transition-all duration-150' : ''
+                      column.sortable !== false
+                        ? "cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-600/50 group transition-all duration-150"
+                        : ""
                     }`}
                     style={{ width: column.width }}
-                    onClick={() => column.sortable !== false && handleSort(column.key)}
+                    onClick={() =>
+                      column.sortable !== false && handleSort(column.key)
+                    }
                   >
-                    <div className={`flex items-center gap-2 ${
-                      column.align === 'center' ? 'justify-center' : 
-                      column.align === 'right' ? 'justify-end' : 'justify-start'
-                    }`}>
+                    <div
+                      className={`flex items-center gap-2 ${
+                        column.align === "center"
+                          ? "justify-center"
+                          : column.align === "right"
+                          ? "justify-end"
+                          : "justify-start"
+                      }`}
+                    >
                       <span>{column.label}</span>
-                      {column.sortable !== false && getSortIndicator(column.key)}
+                      {column.sortable !== false &&
+                        getSortIndicator(column.key)}
                     </div>
                   </th>
                 ))}
@@ -353,13 +493,13 @@ export function DataTable({
               {paginatedData.map((row, index) => {
                 const rowId = String((currentPage - 1) * pageSize + index);
                 const isSelected = selectedRows.has(rowId);
-                
+
                 return (
                   <tr
                     key={rowId}
                     className={`hover:bg-slate-50/80 dark:hover:bg-slate-700/50 transition-all duration-150 ${
-                      isSelected ? 'bg-blue-50/80 dark:bg-blue-900/20' : ''
-                    } ${onRowClick ? 'cursor-pointer' : ''}`}
+                      isSelected ? "bg-blue-50/80 dark:bg-blue-900/20" : ""
+                    } ${onRowClick ? "cursor-pointer" : ""}`}
                     onClick={() => onRowClick?.(row)}
                   >
                     {onSelectionChange && (
@@ -375,16 +515,24 @@ export function DataTable({
                         />
                       </td>
                     )}
-                    {columns.map(column => (
+                    {columns.map((column) => (
                       <td
                         key={column.key}
                         className={`px-4 py-3 text-sm text-slate-900 dark:text-slate-100 ${
-                          column.align === 'center' ? 'text-center' : 
-                          column.align === 'right' ? 'text-right' : 'text-left'
+                          column.align === "center"
+                            ? "text-center"
+                            : column.align === "right"
+                            ? "text-right"
+                            : "text-left"
                         }`}
                       >
-                        {column.render ? column.render(row[column.key], row) : (
-                          <span className="truncate block max-w-xs" title={String(row[column.key])}>
+                        {column.render ? (
+                          column.render(row[column.key], row)
+                        ) : (
+                          <span
+                            className="truncate block max-w-xs"
+                            title={String(row[column.key])}
+                          >
                             {row[column.key]}
                           </span>
                         )}
@@ -402,9 +550,11 @@ export function DataTable({
       {showPagination && totalPages > 1 && (
         <div className="px-4 py-3 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-white/80 dark:from-slate-800/80 dark:to-slate-700/80 backdrop-blur-sm rounded-b-xl flex-shrink-0">
           <div className="text-sm text-slate-600 dark:text-slate-400">
-            Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length} results
+            Showing {(currentPage - 1) * pageSize + 1}-
+            {Math.min(currentPage * pageSize, sortedData.length)} of{" "}
+            {sortedData.length} results
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
@@ -414,18 +564,19 @@ export function DataTable({
               <ChevronLeft size={14} />
               Previous
             </button>
-            
+
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                const pageNum =
+                  Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
                 return (
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
                     className={`px-3 py-1.5 text-sm rounded-lg transition-all duration-200 font-medium ${
                       currentPage === pageNum
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300'
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
                     }`}
                   >
                     {pageNum}
@@ -433,9 +584,11 @@ export function DataTable({
                 );
               })}
             </div>
-            
+
             <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
               disabled={currentPage === totalPages}
               className="flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all duration-200 font-medium"
             >

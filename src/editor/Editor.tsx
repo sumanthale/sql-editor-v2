@@ -4,7 +4,6 @@ import { EditorToolbar } from "./components/Header/EditorToolbar";
 import { DatabaseTree } from "./components/Sidebar/DatabaseTree";
 import { SqlEditor } from "./components/Editor/SqlEditor";
 import { QueryResults } from "./components/Results/QueryResults";
-import { ConnectionManager } from "./components/Modals/ConnectionManager";
 import { ResizableHandle } from "./components/Layout/ResizableHandle";
 import { useResizable } from "./hooks/useResizable";
 import { DatabaseConnection, SqlTab, QueryResult } from "../types/database";
@@ -39,12 +38,13 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
     useState<QueryResult[]>(mockQueryResults);
   const [isQueryLoading, setIsQueryLoading] = useState(false);
   const [lastQueryExecuted, setLastQueryExecuted] = useState<Date>(new Date());
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showConnectionManager, setShowConnectionManager] = useState(false);
   const [queryLimit, setQueryLimit] = useState(1000);
 
   // Resizable panels
   const sidebarResize = useResizable({
-    initialSize: 280,
+    initialSize: 300,
     minSize: 200,
     maxSize: 500,
     direction: "horizontal",
@@ -275,16 +275,6 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
     [activeTabId]
   );
 
-  const handleSaveConnection = useCallback(
-    (connectionData: Omit<DatabaseConnection, "id">) => {
-      const newConnection: DatabaseConnection = {
-        ...connectionData,
-        id: `conn-${Date.now()}`,
-      };
-      setConnections((prev) => [...prev, newConnection]);
-    },
-    []
-  );
 
   // Editor toolbar handlers
   const handleFormatQuery = useCallback(() => {
@@ -362,6 +352,7 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
         onOpenConnectionManager={() => setShowConnectionManager(true)}
         queryLimit={queryLimit}
         onQueryLimitChange={setQueryLimit}
+        setActiveView={setActiveView}
       />
 
       {/* Main Content */}
@@ -371,12 +362,7 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
           style={{ width: `${sidebarResize.size}px` }}
           className="flex-shrink-0 backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border-r border-slate-200/60 dark:border-slate-700/60 shadow-lg"
         >
-          <DatabaseTree
-            connections={connections}
-            schemas={mockSchemas}
-            activeConnection={activeConnection}
-            onConnectionSelect={handleConnectionChange}
-          />
+          <DatabaseTree />
         </div>
 
         {/* Sidebar Resize Handle */}
@@ -433,8 +419,6 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
           </div>
         </div>
       </div>
-
- 
     </div>
   );
 };

@@ -89,6 +89,7 @@ interface DatabaseTreeState {
   loadSchemaContents: (schemaName: string) => Promise<void>;
   loadTableColumns: (schemaName: string, tableName: string) => Promise<void>;
   onNodeSelect: (node: TreeNode) => void;
+  loadNodeChildren: (nodeId: string, node: TreeNode) => Promise<void>;
 }
 
 // Mock API functions - replace these with actual API calls
