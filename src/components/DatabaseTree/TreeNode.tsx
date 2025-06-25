@@ -6,17 +6,17 @@ import {
   Table,
   Eye,
   Zap,
-  Hash,
   Folder,
   FolderOpen,
   Key,
   Link,
-  Shield,
   Circle,
   FileText,
-  Loader
+  Loader,
+  Code,
+  Play
 } from 'lucide-react';
-import { TreeNode as TreeNodeType } from '../../stores/databaseTreeStore';
+import { TreeNode as TreeNodeType, useDatabaseTreeStore } from '../../stores/databaseTreeStore';
 
 interface TreeNodeProps {
   node: TreeNodeType;
@@ -42,16 +42,12 @@ const getNodeIcon = (type: TreeNodeType['type'], isExpanded: boolean, isLoading?
       return <Eye {...iconProps} className="text-purple-500 flex-shrink-0" />;
     case 'function':
       return <Zap {...iconProps} className="text-orange-500 flex-shrink-0" />;
-    case 'sequence':
-      return <Hash {...iconProps} className="text-indigo-500 flex-shrink-0" />;
+    case 'procedure':
+      return <Code {...iconProps} className="text-indigo-500 flex-shrink-0" />;
+    case 'trigger':
+      return <Play {...iconProps} className="text-red-500 flex-shrink-0" />;
     case 'column':
       return <Circle {...iconProps} className="text-slate-400 flex-shrink-0" />;
-    case 'index':
-      return <Key {...iconProps} className="text-yellow-500 flex-shrink-0" />;
-    case 'foreign_key':
-      return <Link {...iconProps} className="text-blue-400 flex-shrink-0" />;
-    case 'check':
-      return <Shield {...iconProps} className="text-red-400 flex-shrink-0" />;
     case 'folder':
       return isExpanded 
         ? <FolderOpen {...iconProps} className="text-slate-500 flex-shrink-0" />
@@ -71,6 +67,11 @@ const getNodeStyles = (type: TreeNodeType['type'], level: number) => {
   
   if (type === 'folder') {
     return `${baseStyles} ${hoverStyles} font-medium text-slate-700 dark:text-slate-300`;
+  }
+  
+  // Clickable items (table, view, procedure, function, trigger)
+  if (['table', 'view', 'procedure', 'function', 'trigger'].includes(type)) {
+    return `${baseStyles} ${hoverStyles} text-slate-600 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300`;
   }
   
   return `${baseStyles} ${hoverStyles} text-slate-600 dark:text-slate-400`;
@@ -98,6 +99,7 @@ export const TreeNode = memo<TreeNodeProps>(({
   onToggle, 
   searchQuery 
 }) => {
+  const { onNodeSelect } = useDatabaseTreeStore();
   const hasChildren = node.hasChildren;
   const paddingLeft = level * 16 + 8;
 
@@ -108,12 +110,26 @@ export const TreeNode = memo<TreeNodeProps>(({
     }
   };
 
+  const handleNodeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // If it has children, toggle expansion
+    if (hasChildren) {
+      onToggle(node.id);
+    }
+    
+    // If it's a selectable item, trigger selection
+    if (['table', 'view', 'procedure', 'function', 'trigger'].includes(node.type)) {
+      onNodeSelect(node);
+    }
+  };
+
   return (
     <div>
       <div
         className={getNodeStyles(node.type, level)}
         style={{ paddingLeft: `${paddingLeft}px` }}
-        onClick={handleToggle}
+        onClick={handleNodeClick}
       >
         {/* Expand/Collapse Icon */}
         <div className="w-4 h-4 flex items-center justify-center">
@@ -148,14 +164,21 @@ export const TreeNode = memo<TreeNodeProps>(({
           </span>
         )}
 
+        {/* Return Type Badge for Functions */}
+        {node.metadata?.returnType && (
+          <span className="text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full font-mono">
+            → {node.metadata.returnType}
+          </span>
+        )}
+
         {/* Primary Key Indicator */}
         {node.metadata?.isPrimaryKey && (
-          <Key size={10} className="text-yellow-500" title="Primary Key" />
+          <Key size={10} className="text-yellow-500" />
         )}
 
         {/* Foreign Key Indicator */}
         {node.metadata?.isForeignKey && (
-          <Link size={10} className="text-blue-500" title="Foreign Key" />
+          <Link size={10} className="text-blue-500" />
         )}
       </div>
 

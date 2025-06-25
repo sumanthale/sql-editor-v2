@@ -4,20 +4,58 @@ import { subscribeWithSelector } from 'zustand/middleware';
 export interface TreeNode {
   id: string;
   name: string;
-  type: 'schema' | 'table' | 'view' | 'function' | 'sequence' | 'column' | 'index' | 'foreign_key' | 'check' | 'folder';
+  type: 'schema' | 'table' | 'view' | 'function' | 'procedure' | 'trigger' | 'column' | 'folder';
   children?: TreeNode[];
-  hasChildren?: boolean; // Indicates if node can have children (for lazy loading)
-  isLoaded?: boolean; // Indicates if children have been loaded
-  isLoading?: boolean; // Indicates if currently loading children
+  hasChildren?: boolean;
+  isLoaded?: boolean;
+  isLoading?: boolean;
   metadata?: {
     dataType?: string;
     nullable?: boolean;
     isPrimaryKey?: boolean;
     isForeignKey?: boolean;
     description?: string;
+    definition?: string;
+    returnType?: string;
     schemaName?: string;
     tableName?: string;
   };
+}
+
+interface ApiResponse<T> {
+  data: T;
+  error?: string;
+  success: boolean;
+}
+
+interface ViewData {
+  view_name: string;
+  view_definition: string;
+}
+
+interface ProcedureData {
+  procedure_name: string;
+  procedure_definition: string;
+}
+
+interface FunctionData {
+  function_name: string;
+  function_definition: string;
+  function_return: string;
+}
+
+interface TriggerData {
+  trigger_name: string;
+  trigger_definition: string;
+  table_name: string;
+}
+
+interface ColumnData {
+  column_name: string;
+  data_type: string;
+  nullable: boolean;
+  is_primary_key?: boolean;
+  is_foreign_key?: boolean;
 }
 
 interface DatabaseTreeState {
@@ -26,11 +64,22 @@ interface DatabaseTreeState {
   searchQuery: string;
   filteredTree: TreeNode[];
   
+  // Cache for API responses
+  schemasCache: Map<string, {
+    tables: string[];
+    views: ViewData[];
+    procedures: ProcedureData[];
+    functions: FunctionData[];
+    triggers: TriggerData[];
+  }>;
+  columnsCache: Map<string, ColumnData[]>; // key: schemaName.tableName
+  
   // Actions
   setSearchQuery: (query: string) => void;
   toggleNode: (nodeId: string) => void;
   expandNode: (nodeId: string) => void;
   collapseNode: (nodeId: string) => void;
+  collapseNodeAndChildren: (nodeId: string) => void;
   expandAll: () => void;
   collapseAll: () => void;
   setTreeData: (data: TreeNode[]) => void;
@@ -38,377 +87,180 @@ interface DatabaseTreeState {
   setNodeLoading: (nodeId: string, isLoading: boolean) => void;
   loadSchemas: () => Promise<void>;
   loadSchemaContents: (schemaName: string) => Promise<void>;
-  loadTableDetails: (schemaName: string, tableName: string, tableType: 'table' | 'view' | 'function') => Promise<void>;
+  loadTableColumns: (schemaName: string, tableName: string) => Promise<void>;
+  onNodeSelect: (node: TreeNode) => void;
 }
 
 // Mock API functions - replace these with actual API calls
 const mockApiDelay = () => new Promise(resolve => setTimeout(resolve, 800));
 
-const mockGetSchemas = async (): Promise<TreeNode[]> => {
+const mockGetSchemas = async (): Promise<ApiResponse<string[]>> => {
   await mockApiDelay();
-  return [
-    {
-      id: 'schema-public',
-      name: 'public',
-      type: 'schema',
-      hasChildren: true,
-      isLoaded: false,
-      children: []
-    },
-    {
-      id: 'schema-information_schema',
-      name: 'information_schema',
-      type: 'schema',
-      hasChildren: true,
-      isLoaded: false,
-      children: []
-    }
-  ];
+  return {
+    data: ['public', 'information_schema', 'pg_catalog'],
+    success: true
+  };
 };
 
-const mockGetSchemaContents = async (schemaName: string): Promise<TreeNode[]> => {
+const mockGetTables = async (schemaName: string): Promise<ApiResponse<string[]>> => {
   await mockApiDelay();
   
   if (schemaName === 'public') {
-    return [
-      {
-        id: `folder-tables-${schemaName}`,
-        name: 'Tables',
-        type: 'folder',
-        hasChildren: true,
-        isLoaded: false,
-        metadata: { schemaName },
-        children: []
-      },
-      {
-        id: `folder-views-${schemaName}`,
-        name: 'Views',
-        type: 'folder',
-        hasChildren: true,
-        isLoaded: false,
-        metadata: { schemaName },
-        children: []
-      },
-      {
-        id: `folder-functions-${schemaName}`,
-        name: 'Functions',
-        type: 'folder',
-        hasChildren: true,
-        isLoaded: false,
-        metadata: { schemaName },
-        children: []
-      },
-      {
-        id: `folder-sequences-${schemaName}`,
-        name: 'Sequences',
-        type: 'folder',
-        hasChildren: true,
-        isLoaded: false,
-        metadata: { schemaName },
-        children: []
-      }
-    ];
+    return {
+      data: ['users', 'orders', 'products', 'categories', 'order_items', 'customers'],
+      success: true
+    };
   }
   
-  return [
-    {
-      id: `folder-tables-${schemaName}`,
-      name: 'Tables',
-      type: 'folder',
-      hasChildren: false,
-      isLoaded: true,
-      metadata: { schemaName },
-      children: []
-    }
-  ];
+  return {
+    data: [],
+    success: true
+  };
 };
 
-const mockGetTablesInSchema = async (schemaName: string): Promise<TreeNode[]> => {
+const mockGetViews = async (schemaName: string): Promise<ApiResponse<ViewData[]>> => {
   await mockApiDelay();
   
   if (schemaName === 'public') {
-    return [
-      {
-        id: `table-${schemaName}-audit`,
-        name: 'audit',
-        type: 'table',
-        hasChildren: true,
-        isLoaded: false,
-        metadata: { schemaName, tableName: 'audit' },
-        children: []
-      },
-      {
-        id: `table-${schemaName}-department`,
-        name: 'department',
-        type: 'table',
-        hasChildren: true,
-        isLoaded: false,
-        metadata: { schemaName, tableName: 'department' },
-        children: []
-      },
-      {
-        id: `table-${schemaName}-employee`,
-        name: 'employee',
-        type: 'table',
-        hasChildren: true,
-        isLoaded: false,
-        metadata: { schemaName, tableName: 'employee' },
-        children: []
-      },
-      {
-        id: `table-${schemaName}-salary`,
-        name: 'salary',
-        type: 'table',
-        hasChildren: true,
-        isLoaded: false,
-        metadata: { schemaName, tableName: 'salary' },
-        children: []
-      }
-    ];
+    return {
+      data: [
+        {
+          view_name: 'user_orders_summary',
+          view_definition: 'SELECT u.id, u.name, COUNT(o.id) as order_count FROM users u LEFT JOIN orders o ON u.id = o.user_id GROUP BY u.id, u.name'
+        },
+        {
+          view_name: 'monthly_sales',
+          view_definition: 'SELECT DATE_TRUNC(\'month\', order_date) as month, SUM(total_amount) as total_sales FROM orders GROUP BY DATE_TRUNC(\'month\', order_date)'
+        }
+      ],
+      success: true
+    };
   }
   
-  return [];
+  return {
+    data: [],
+    success: true
+  };
 };
 
-const mockGetViewsInSchema = async (schemaName: string): Promise<TreeNode[]> => {
+const mockGetProcedures = async (schemaName: string): Promise<ApiResponse<ProcedureData[]>> => {
   await mockApiDelay();
   
   if (schemaName === 'public') {
-    return [
-      {
-        id: `view-${schemaName}-current_dept_emp`,
-        name: 'current_dept_emp',
-        type: 'view',
-        hasChildren: true,
-        isLoaded: false,
-        metadata: { schemaName, tableName: 'current_dept_emp' },
-        children: []
-      },
-      {
-        id: `view-${schemaName}-dept_emp_latest_date`,
-        name: 'dept_emp_latest_date',
-        type: 'view',
-        hasChildren: true,
-        isLoaded: false,
-        metadata: { schemaName, tableName: 'dept_emp_latest_date' },
-        children: []
-      }
-    ];
+    return {
+      data: [
+        {
+          procedure_name: 'update_user_status',
+          procedure_definition: 'CREATE OR REPLACE PROCEDURE update_user_status(user_id INT, new_status VARCHAR) AS $$ BEGIN UPDATE users SET status = new_status WHERE id = user_id; END; $$ LANGUAGE plpgsql;'
+        },
+        {
+          procedure_name: 'process_order',
+          procedure_definition: 'CREATE OR REPLACE PROCEDURE process_order(order_id INT) AS $$ BEGIN UPDATE orders SET status = \'processed\' WHERE id = order_id; END; $$ LANGUAGE plpgsql;'
+        }
+      ],
+      success: true
+    };
   }
   
-  return [];
+  return {
+    data: [],
+    success: true
+  };
 };
 
-const mockGetFunctionsInSchema = async (schemaName: string): Promise<TreeNode[]> => {
+const mockGetFunctions = async (schemaName: string): Promise<ApiResponse<FunctionData[]>> => {
   await mockApiDelay();
   
   if (schemaName === 'public') {
-    return [
-      {
-        id: `function-${schemaName}-log_dml_operations`,
-        name: 'log_dml_operations()',
-        type: 'function',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { schemaName },
-        children: []
-      }
-    ];
+    return {
+      data: [
+        {
+          function_name: 'calculate_total_revenue',
+          function_definition: 'CREATE OR REPLACE FUNCTION calculate_total_revenue() RETURNS DECIMAL AS $$ BEGIN RETURN (SELECT SUM(total_amount) FROM orders WHERE status = \'completed\'); END; $$ LANGUAGE plpgsql;',
+          function_return: 'DECIMAL'
+        },
+        {
+          function_name: 'get_user_orders',
+          function_definition: 'CREATE OR REPLACE FUNCTION get_user_orders(user_id INT) RETURNS TABLE(order_id INT, total_amount DECIMAL, order_date DATE) AS $$ BEGIN RETURN QUERY SELECT id, total_amount, order_date FROM orders WHERE user_id = $1; END; $$ LANGUAGE plpgsql;',
+          function_return: 'TABLE'
+        }
+      ],
+      success: true
+    };
   }
   
-  return [];
+  return {
+    data: [],
+    success: true
+  };
 };
 
-const mockGetSequencesInSchema = async (schemaName: string): Promise<TreeNode[]> => {
+const mockGetTriggers = async (schemaName: string): Promise<ApiResponse<TriggerData[]>> => {
   await mockApiDelay();
   
   if (schemaName === 'public') {
-    return [
-      {
-        id: `sequence-${schemaName}-audit_id_seq`,
-        name: 'audit_id_seq',
-        type: 'sequence',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { schemaName },
-        children: []
-      },
-      {
-        id: `sequence-${schemaName}-employee_emp_no_seq`,
-        name: 'employee_emp_no_seq',
-        type: 'sequence',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { schemaName },
-        children: []
-      }
-    ];
+    return {
+      data: [
+        {
+          trigger_name: 'update_modified_time',
+          trigger_definition: 'CREATE TRIGGER update_modified_time BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_modified_column();',
+          table_name: 'users'
+        },
+        {
+          trigger_name: 'log_order_changes',
+          trigger_definition: 'CREATE TRIGGER log_order_changes AFTER INSERT OR UPDATE OR DELETE ON orders FOR EACH ROW EXECUTE FUNCTION log_changes();',
+          table_name: 'orders'
+        }
+      ],
+      success: true
+    };
   }
   
-  return [];
+  return {
+    data: [],
+    success: true
+  };
 };
 
-const mockGetTableDetails = async (schemaName: string, tableName: string): Promise<TreeNode[]> => {
+const mockGetTableColumns = async (schemaName: string, tableName: string): Promise<ApiResponse<ColumnData[]>> => {
   await mockApiDelay();
   
-  const folders: TreeNode[] = [
-    {
-      id: `folder-columns-${schemaName}-${tableName}`,
-      name: 'Columns',
-      type: 'folder',
-      hasChildren: true,
-      isLoaded: false,
-      metadata: { schemaName, tableName },
-      children: []
-    }
-  ];
-
-  // Add indexes folder for tables
-  if (tableName !== 'salary') {
-    folders.push({
-      id: `folder-indexes-${schemaName}-${tableName}`,
-      name: 'Indexes',
-      type: 'folder',
-      hasChildren: true,
-      isLoaded: false,
-      metadata: { schemaName, tableName },
-      children: []
-    });
-  }
-
-  // Add foreign keys folder for some tables
-  if (['dept_emp', 'dept_manager'].includes(tableName)) {
-    folders.push({
-      id: `folder-foreign_keys-${schemaName}-${tableName}`,
-      name: 'Foreign keys',
-      type: 'folder',
-      hasChildren: true,
-      isLoaded: false,
-      metadata: { schemaName, tableName },
-      children: []
-    });
-  }
-
-  // Add checks folder for employee table
-  if (tableName === 'employee') {
-    folders.push({
-      id: `folder-checks-${schemaName}-${tableName}`,
-      name: 'Checks',
-      type: 'folder',
-      hasChildren: true,
-      isLoaded: false,
-      metadata: { schemaName, tableName },
-      children: []
-    });
-  }
-
-  return folders;
-};
-
-const mockGetTableColumns = async (schemaName: string, tableName: string): Promise<TreeNode[]> => {
-  await mockApiDelay();
-  
-  const columnData: Record<string, TreeNode[]> = {
-    audit: [
-      {
-        id: `column-${schemaName}-${tableName}-id`,
-        name: 'id',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'integer', isPrimaryKey: true, nullable: false, schemaName, tableName }
-      },
-      {
-        id: `column-${schemaName}-${tableName}-operation`,
-        name: 'operation',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'text', nullable: false, schemaName, tableName }
-      },
-      {
-        id: `column-${schemaName}-${tableName}-query`,
-        name: 'query',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'text', nullable: true, schemaName, tableName }
-      },
-      {
-        id: `column-${schemaName}-${tableName}-user_name`,
-        name: 'user_name',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'text', nullable: false, schemaName, tableName }
-      },
-      {
-        id: `column-${schemaName}-${tableName}-changed_at`,
-        name: 'changed_at',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'timestamp with time zone', nullable: false, schemaName, tableName }
-      }
+  const columnData: Record<string, ColumnData[]> = {
+    users: [
+      { column_name: 'id', data_type: 'integer', nullable: false, is_primary_key: true },
+      { column_name: 'email', data_type: 'varchar(255)', nullable: false },
+      { column_name: 'name', data_type: 'varchar(100)', nullable: false },
+      { column_name: 'age', data_type: 'integer', nullable: true },
+      { column_name: 'is_active', data_type: 'boolean', nullable: false },
+      { column_name: 'created_at', data_type: 'timestamp', nullable: false },
+      { column_name: 'updated_at', data_type: 'timestamp', nullable: true }
     ],
-    department: [
-      {
-        id: `column-${schemaName}-${tableName}-dept_no`,
-        name: 'dept_no',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'text', isPrimaryKey: true, nullable: false, schemaName, tableName }
-      },
-      {
-        id: `column-${schemaName}-${tableName}-dept_name`,
-        name: 'dept_name',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'text', nullable: false, schemaName, tableName }
-      }
+    orders: [
+      { column_name: 'id', data_type: 'integer', nullable: false, is_primary_key: true },
+      { column_name: 'user_id', data_type: 'integer', nullable: false, is_foreign_key: true },
+      { column_name: 'total_amount', data_type: 'decimal(10,2)', nullable: false },
+      { column_name: 'status', data_type: 'varchar(50)', nullable: false },
+      { column_name: 'order_date', data_type: 'date', nullable: false },
+      { column_name: 'created_at', data_type: 'timestamp', nullable: false }
     ],
-    employee: [
-      {
-        id: `column-${schemaName}-${tableName}-emp_no`,
-        name: 'emp_no',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'integer', isPrimaryKey: true, nullable: false, schemaName, tableName }
-      },
-      {
-        id: `column-${schemaName}-${tableName}-first_name`,
-        name: 'first_name',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'text', nullable: false, schemaName, tableName }
-      },
-      {
-        id: `column-${schemaName}-${tableName}-last_name`,
-        name: 'last_name',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'text', nullable: false, schemaName, tableName }
-      },
-      {
-        id: `column-${schemaName}-${tableName}-gender`,
-        name: 'gender',
-        type: 'column',
-        hasChildren: false,
-        isLoaded: true,
-        metadata: { dataType: 'text', nullable: false, schemaName, tableName }
-      }
+    products: [
+      { column_name: 'id', data_type: 'integer', nullable: false, is_primary_key: true },
+      { column_name: 'name', data_type: 'varchar(255)', nullable: false },
+      { column_name: 'price', data_type: 'decimal(10,2)', nullable: false },
+      { column_name: 'description', data_type: 'text', nullable: true },
+      { column_name: 'category_id', data_type: 'integer', nullable: false, is_foreign_key: true },
+      { column_name: 'in_stock', data_type: 'boolean', nullable: false },
+      { column_name: 'created_at', data_type: 'timestamp', nullable: false }
     ]
   };
 
-  return columnData[tableName] || [];
+  return {
+    data: columnData[tableName] || [],
+    success: true
+  };
 };
 
-// Filter tree function - only filters loaded nodes
+// Filter tree function
 const filterTree = (nodes: TreeNode[], query: string): TreeNode[] => {
   if (!query.trim()) return nodes;
 
@@ -424,7 +276,6 @@ const filterTree = (nodes: TreeNode[], query: string): TreeNode[] => {
         .filter((child): child is TreeNode => child !== null);
     }
     
-    // Include node if name matches or if it has matching children
     if (nameMatches || filteredChildren.length > 0) {
       return {
         ...node,
@@ -440,7 +291,7 @@ const filterTree = (nodes: TreeNode[], query: string): TreeNode[] => {
     .filter((node): node is TreeNode => node !== null);
 };
 
-// Get all node IDs recursively (only from loaded nodes)
+// Get all node IDs recursively
 const getAllNodeIds = (nodes: TreeNode[]): string[] => {
   const ids: string[] = [];
   
@@ -455,12 +306,31 @@ const getAllNodeIds = (nodes: TreeNode[]): string[] => {
   return ids;
 };
 
+// Get all child node IDs recursively
+const getAllChildNodeIds = (node: TreeNode): string[] => {
+  const ids: string[] = [];
+  
+  const traverse = (currentNode: TreeNode) => {
+    if (currentNode.children) {
+      currentNode.children.forEach(child => {
+        ids.push(child.id);
+        traverse(child);
+      });
+    }
+  };
+  
+  traverse(node);
+  return ids;
+};
+
 export const useDatabaseTreeStore = create<DatabaseTreeState>()(
   subscribeWithSelector((set, get) => ({
     treeData: [],
     expandedNodes: new Set(),
     searchQuery: '',
     filteredTree: [],
+    schemasCache: new Map(),
+    columnsCache: new Map(),
 
     setSearchQuery: (query: string) => {
       set((state) => {
@@ -468,7 +338,6 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
         return {
           searchQuery: query,
           filteredTree,
-          // Auto-expand nodes when searching (only loaded ones)
           expandedNodes: query.trim() 
             ? new Set([...state.expandedNodes, ...getAllNodeIds(filteredTree)])
             : state.expandedNodes
@@ -481,12 +350,8 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
       const isExpanded = state.expandedNodes.has(nodeId);
       
       if (isExpanded) {
-        // Collapse node
-        set((state) => {
-          const newExpanded = new Set(state.expandedNodes);
-          newExpanded.delete(nodeId);
-          return { expandedNodes: newExpanded };
-        });
+        // Collapse node and all its children
+        get().collapseNodeAndChildren(nodeId);
       } else {
         // Expand node
         set((state) => ({
@@ -522,6 +387,35 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
       set((state) => {
         const newExpanded = new Set(state.expandedNodes);
         newExpanded.delete(nodeId);
+        return { expandedNodes: newExpanded };
+      });
+    },
+
+    collapseNodeAndChildren: (nodeId: string) => {
+      set((state) => {
+        const findNode = (nodes: TreeNode[], id: string): TreeNode | null => {
+          for (const node of nodes) {
+            if (node.id === id) return node;
+            if (node.children) {
+              const found = findNode(node.children, id);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+
+        const node = findNode(state.treeData, nodeId);
+        const newExpanded = new Set(state.expandedNodes);
+        
+        // Remove the node itself
+        newExpanded.delete(nodeId);
+        
+        // Remove all child nodes
+        if (node) {
+          const childIds = getAllChildNodeIds(node);
+          childIds.forEach(id => newExpanded.delete(id));
+        }
+        
         return { expandedNodes: newExpanded };
       });
     },
@@ -602,8 +496,18 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
     // API Methods
     loadSchemas: async () => {
       try {
-        const schemas = await mockGetSchemas();
-        get().setTreeData(schemas);
+        const response = await mockGetSchemas();
+        if (response.success) {
+          const schemas: TreeNode[] = response.data.map(schemaName => ({
+            id: `schema-${schemaName}`,
+            name: schemaName,
+            type: 'schema',
+            hasChildren: true,
+            isLoaded: false,
+            children: []
+          }));
+          get().setTreeData(schemas);
+        }
       } catch (error) {
         console.error('Failed to load schemas:', error);
       }
@@ -611,94 +515,338 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
 
     loadSchemaContents: async (schemaName: string) => {
       const nodeId = `schema-${schemaName}`;
+      const state = get();
+      
+      // Check if already cached
+      if (state.schemasCache.has(schemaName)) {
+        const cached = state.schemasCache.get(schemaName)!;
+        const children = [
+          {
+            id: `folder-tables-${schemaName}`,
+            name: 'Tables',
+            type: 'folder' as const,
+            hasChildren: cached.tables.length > 0,
+            isLoaded: true,
+            metadata: { schemaName },
+            children: cached.tables.map(tableName => ({
+              id: `table-${schemaName}-${tableName}`,
+              name: tableName,
+              type: 'table' as const,
+              hasChildren: true,
+              isLoaded: false,
+              metadata: { schemaName, tableName },
+              children: []
+            }))
+          },
+          {
+            id: `folder-views-${schemaName}`,
+            name: 'Views',
+            type: 'folder' as const,
+            hasChildren: cached.views.length > 0,
+            isLoaded: true,
+            metadata: { schemaName },
+            children: cached.views.map(view => ({
+              id: `view-${schemaName}-${view.view_name}`,
+              name: view.view_name,
+              type: 'view' as const,
+              hasChildren: false,
+              isLoaded: true,
+              metadata: { schemaName, definition: view.view_definition },
+              children: []
+            }))
+          },
+          {
+            id: `folder-procedures-${schemaName}`,
+            name: 'Procedures',
+            type: 'folder' as const,
+            hasChildren: cached.procedures.length > 0,
+            isLoaded: true,
+            metadata: { schemaName },
+            children: cached.procedures.map(proc => ({
+              id: `procedure-${schemaName}-${proc.procedure_name}`,
+              name: proc.procedure_name,
+              type: 'procedure' as const,
+              hasChildren: false,
+              isLoaded: true,
+              metadata: { schemaName, definition: proc.procedure_definition },
+              children: []
+            }))
+          },
+          {
+            id: `folder-functions-${schemaName}`,
+            name: 'Functions',
+            type: 'folder' as const,
+            hasChildren: cached.functions.length > 0,
+            isLoaded: true,
+            metadata: { schemaName },
+            children: cached.functions.map(func => ({
+              id: `function-${schemaName}-${func.function_name}`,
+              name: func.function_name,
+              type: 'function' as const,
+              hasChildren: false,
+              isLoaded: true,
+              metadata: { 
+                schemaName, 
+                definition: func.function_definition,
+                returnType: func.function_return
+              },
+              children: []
+            }))
+          },
+          {
+            id: `folder-triggers-${schemaName}`,
+            name: 'Triggers',
+            type: 'folder' as const,
+            hasChildren: cached.triggers.length > 0,
+            isLoaded: true,
+            metadata: { schemaName },
+            children: cached.triggers.map(trigger => ({
+              id: `trigger-${schemaName}-${trigger.trigger_name}`,
+              name: trigger.trigger_name,
+              type: 'trigger' as const,
+              hasChildren: false,
+              isLoaded: true,
+              metadata: { 
+                schemaName, 
+                definition: trigger.trigger_definition,
+                tableName: trigger.table_name
+              },
+              children: []
+            }))
+          }
+        ];
+        
+        get().updateNodeChildren(nodeId, children);
+        return;
+      }
+
       try {
         get().setNodeLoading(nodeId, true);
-        const contents = await mockGetSchemaContents(schemaName);
-        get().updateNodeChildren(nodeId, contents);
+        
+        // Make all 5 API calls in parallel
+        const [tablesRes, viewsRes, proceduresRes, functionsRes, triggersRes] = await Promise.all([
+          mockGetTables(schemaName),
+          mockGetViews(schemaName),
+          mockGetProcedures(schemaName),
+          mockGetFunctions(schemaName),
+          mockGetTriggers(schemaName)
+        ]);
+
+        if (tablesRes.success && viewsRes.success && proceduresRes.success && functionsRes.success && triggersRes.success) {
+          // Cache the results
+          state.schemasCache.set(schemaName, {
+            tables: tablesRes.data,
+            views: viewsRes.data,
+            procedures: proceduresRes.data,
+            functions: functionsRes.data,
+            triggers: triggersRes.data
+          });
+
+          // Create tree structure
+          const children = [
+            {
+              id: `folder-tables-${schemaName}`,
+              name: 'Tables',
+              type: 'folder' as const,
+              hasChildren: tablesRes.data.length > 0,
+              isLoaded: true,
+              metadata: { schemaName },
+              children: tablesRes.data.map(tableName => ({
+                id: `table-${schemaName}-${tableName}`,
+                name: tableName,
+                type: 'table' as const,
+                hasChildren: true,
+                isLoaded: false,
+                metadata: { schemaName, tableName },
+                children: []
+              }))
+            },
+            {
+              id: `folder-views-${schemaName}`,
+              name: 'Views',
+              type: 'folder' as const,
+              hasChildren: viewsRes.data.length > 0,
+              isLoaded: true,
+              metadata: { schemaName },
+              children: viewsRes.data.map(view => ({
+                id: `view-${schemaName}-${view.view_name}`,
+                name: view.view_name,
+                type: 'view' as const,
+                hasChildren: false,
+                isLoaded: true,
+                metadata: { schemaName, definition: view.view_definition },
+                children: []
+              }))
+            },
+            {
+              id: `folder-procedures-${schemaName}`,
+              name: 'Procedures',
+              type: 'folder' as const,
+              hasChildren: proceduresRes.data.length > 0,
+              isLoaded: true,
+              metadata: { schemaName },
+              children: proceduresRes.data.map(proc => ({
+                id: `procedure-${schemaName}-${proc.procedure_name}`,
+                name: proc.procedure_name,
+                type: 'procedure' as const,
+                hasChildren: false,
+                isLoaded: true,
+                metadata: { schemaName, definition: proc.procedure_definition },
+                children: []
+              }))
+            },
+            {
+              id: `folder-functions-${schemaName}`,
+              name: 'Functions',
+              type: 'folder' as const,
+              hasChildren: functionsRes.data.length > 0,
+              isLoaded: true,
+              metadata: { schemaName },
+              children: functionsRes.data.map(func => ({
+                id: `function-${schemaName}-${func.function_name}`,
+                name: func.function_name,
+                type: 'function' as const,
+                hasChildren: false,
+                isLoaded: true,
+                metadata: { 
+                  schemaName, 
+                  definition: func.function_definition,
+                  returnType: func.function_return
+                },
+                children: []
+              }))
+            },
+            {
+              id: `folder-triggers-${schemaName}`,
+              name: 'Triggers',
+              type: 'folder' as const,
+              hasChildren: triggersRes.data.length > 0,
+              isLoaded: true,
+              metadata: { schemaName },
+              children: triggersRes.data.map(trigger => ({
+                id: `trigger-${schemaName}-${trigger.trigger_name}`,
+                name: trigger.trigger_name,
+                type: 'trigger' as const,
+                hasChildren: false,
+                isLoaded: true,
+                metadata: { 
+                  schemaName, 
+                  definition: trigger.trigger_definition,
+                  tableName: trigger.table_name
+                },
+                children: []
+              }))
+            }
+          ];
+
+          get().updateNodeChildren(nodeId, children);
+        }
       } catch (error) {
         console.error('Failed to load schema contents:', error);
         get().setNodeLoading(nodeId, false);
       }
     },
 
-    loadTableDetails: async (schemaName: string, tableName: string, tableType: 'table' | 'view' | 'function') => {
-      const nodeId = `${tableType}-${schemaName}-${tableName}`;
+    loadTableColumns: async (schemaName: string, tableName: string) => {
+      const nodeId = `table-${schemaName}-${tableName}`;
+      const cacheKey = `${schemaName}.${tableName}`;
+      const state = get();
+      
+      // Check if already cached
+      if (state.columnsCache.has(cacheKey)) {
+        const cached = state.columnsCache.get(cacheKey)!;
+        const children = cached.map(col => ({
+          id: `column-${schemaName}-${tableName}-${col.column_name}`,
+          name: col.column_name,
+          type: 'column' as const,
+          hasChildren: false,
+          isLoaded: true,
+          metadata: {
+            dataType: col.data_type,
+            nullable: col.nullable,
+            isPrimaryKey: col.is_primary_key,
+            isForeignKey: col.is_foreign_key,
+            schemaName,
+            tableName
+          },
+          children: []
+        }));
+        
+        get().updateNodeChildren(nodeId, children);
+        return;
+      }
+
       try {
         get().setNodeLoading(nodeId, true);
-        const details = await mockGetTableDetails(schemaName, tableName);
-        get().updateNodeChildren(nodeId, details);
+        const response = await mockGetTableColumns(schemaName, tableName);
+        
+        if (response.success) {
+          // Cache the results
+          state.columnsCache.set(cacheKey, response.data);
+          
+          const children = response.data.map(col => ({
+            id: `column-${schemaName}-${tableName}-${col.column_name}`,
+            name: col.column_name,
+            type: 'column' as const,
+            hasChildren: false,
+            isLoaded: true,
+            metadata: {
+              dataType: col.data_type,
+              nullable: col.nullable,
+              isPrimaryKey: col.is_primary_key,
+              isForeignKey: col.is_foreign_key,
+              schemaName,
+              tableName
+            },
+            children: []
+          }));
+          
+          get().updateNodeChildren(nodeId, children);
+        }
       } catch (error) {
-        console.error('Failed to load table details:', error);
+        console.error('Failed to load table columns:', error);
         get().setNodeLoading(nodeId, false);
       }
+    },
+
+    onNodeSelect: (node: TreeNode) => {
+      let definition = '';
+      
+      switch (node.type) {
+        case 'table':
+          if (node.metadata?.schemaName && node.metadata?.tableName) {
+            definition = `SELECT * FROM ${node.metadata.schemaName}.${node.metadata.tableName};`;
+          }
+          break;
+        case 'view':
+        case 'procedure':
+        case 'function':
+        case 'trigger':
+          definition = node.metadata?.definition || '';
+          break;
+        default:
+          return;
+      }
+      
+      // Dispatch custom event to update editor
+      window.dispatchEvent(new CustomEvent('insertDefinition', { 
+        detail: { definition } 
+      }));
     },
 
     // Helper method to load node children based on node type
     loadNodeChildren: async (nodeId: string, node: TreeNode) => {
       try {
         get().setNodeLoading(nodeId, true);
-        let children: TreeNode[] = [];
 
         if (node.type === 'schema') {
-          children = await mockGetSchemaContents(node.name);
-        } else if (node.type === 'folder') {
-          const { schemaName, tableName } = node.metadata || {};
-          
-          if (node.name === 'Tables' && schemaName) {
-            children = await mockGetTablesInSchema(schemaName);
-          } else if (node.name === 'Views' && schemaName) {
-            children = await mockGetViewsInSchema(schemaName);
-          } else if (node.name === 'Functions' && schemaName) {
-            children = await mockGetFunctionsInSchema(schemaName);
-          } else if (node.name === 'Sequences' && schemaName) {
-            children = await mockGetSequencesInSchema(schemaName);
-          } else if (node.name === 'Columns' && schemaName && tableName) {
-            children = await mockGetTableColumns(schemaName, tableName);
-          } else if (node.name === 'Indexes' && schemaName && tableName) {
-            // Mock indexes
-            children = [
-              {
-                id: `index-${schemaName}-${tableName}-pkey`,
-                name: `${tableName}_pkey`,
-                type: 'index',
-                hasChildren: false,
-                isLoaded: true,
-                metadata: { description: 'Primary key index', schemaName, tableName }
-              }
-            ];
-          } else if (node.name === 'Foreign keys' && schemaName && tableName) {
-            // Mock foreign keys
-            children = [
-              {
-                id: `fk-${schemaName}-${tableName}-dept_no_fkey`,
-                name: `${tableName}_dept_no_fkey`,
-                type: 'foreign_key',
-                hasChildren: false,
-                isLoaded: true,
-                metadata: { schemaName, tableName }
-              }
-            ];
-          } else if (node.name === 'Checks' && schemaName && tableName) {
-            // Mock checks
-            children = [
-              {
-                id: `check-${schemaName}-${tableName}-gender_check`,
-                name: `${tableName}_gender_check`,
-                type: 'check',
-                hasChildren: false,
-                isLoaded: true,
-                metadata: { description: "(gender = ANY (ARRAY['M'::text, 'F'::text]))", schemaName, tableName }
-              }
-            ];
-          }
-        } else if (['table', 'view'].includes(node.type)) {
+          await get().loadSchemaContents(node.name);
+        } else if (node.type === 'table') {
           const { schemaName, tableName } = node.metadata || {};
           if (schemaName && tableName) {
-            children = await mockGetTableDetails(schemaName, tableName);
+            await get().loadTableColumns(schemaName, tableName);
           }
         }
-
-        get().updateNodeChildren(nodeId, children);
       } catch (error) {
         console.error('Failed to load node children:', error);
         get().setNodeLoading(nodeId, false);

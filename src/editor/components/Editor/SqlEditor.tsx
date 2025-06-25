@@ -20,31 +20,84 @@ export function SqlEditor({
   const { theme } = useTheme();
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<Monaco | null>(null);
-  const formatSql = React.useCallback((editor:any) => {
+
+  const formatSql = React.useCallback((editor: any) => {
     const unformatted = editor.getValue();
     const formatted = format(unformatted, {
-      language: "sql", // "mysql", "postgresql", "sqlite", etc.
+      language: "sql",
     });
     editor.setValue(formatted);
-    
   }, []);
-useEffect(() => {
-  const handleKeydown = (e: KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault();
-      onRunQuery();
-    }
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "f") {
-      e.preventDefault();
-      console.log("Formatting SQL");
-      if (editorRef.current) formatSql(editorRef.current);
-    }
-  };
 
-  document.addEventListener("keydown", handleKeydown);
-  return () => document.removeEventListener("keydown", handleKeydown);
-}, [onRunQuery, formatSql, editorRef]);
+  // Listen for definition insertion events
+  useEffect(() => {
+    const handleInsertDefinition = (event: CustomEvent) => {
+      const { definition } = event.detail;
+      if (editorRef.current && definition) {
+        const editor = editorRef.current;
+        const position = editor.getPosition();
+        const range = {
+          startLineNumber: position.lineNumber,
+          startColumn: position.column,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column,
+        };
 
+        // Insert the definition at cursor position
+        editor.executeEdits("insert-definition", [
+          {
+            range: range,
+            text: definition,
+          },
+        ]);
+
+        // Move cursor to end of inserted text
+        const lines = definition.split("\n");
+        const newPosition = {
+          lineNumber: position.lineNumber + lines.length - 1,
+          column:
+            lines.length === 1
+              ? position.column + definition.length
+              : lines[lines.length - 1].length + 1,
+        };
+        editor.setPosition(newPosition);
+        editor.focus();
+      }
+    };
+
+    window.addEventListener(
+      "insertDefinition",
+      handleInsertDefinition as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "insertDefinition",
+        handleInsertDefinition as EventListener
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        onRunQuery();
+      }
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "f"
+      ) {
+        e.preventDefault();
+        console.log("Formatting SQL");
+        if (editorRef.current) formatSql(editorRef.current);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeydown);
+    return () => document.removeEventListener("keydown", handleKeydown);
+  }, [onRunQuery, formatSql, editorRef]);
 
   const setupAutoCompletion = (monaco: Monaco) => {
     // SQL keywords

@@ -7,8 +7,8 @@ import {
   Database,
   RefreshCw
 } from 'lucide-react';
-import { TreeView } from './TreeView';
 import { useDatabaseTreeStore } from '../../stores/databaseTreeStore';
+import { TreeView } from './TreeView';
 
 export const DatabaseTreeSidebar: React.FC = () => {
   const {
@@ -40,7 +40,7 @@ export const DatabaseTreeSidebar: React.FC = () => {
     loadSchemas();
   };
 
-  const totalExpandedCount = expandedNodes.size;
+  // const totalExpandedCount = expandedNodes.size;
   const hasSearchQuery = searchQuery.trim().length > 0;
 
   return (
@@ -117,9 +117,9 @@ export const DatabaseTreeSidebar: React.FC = () => {
                 {filteredTree.length} result{filteredTree.length !== 1 ? 's' : ''}
               </span>
             )}
-            <span className="text-xs text-slate-500 dark:text-slate-400 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full font-medium">
+            {/* <span className="text-xs text-slate-500 dark:text-slate-400 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full font-medium">
               {totalExpandedCount} expanded
-            </span>
+            </span> */}
           </div>
         </div>
       </div>
@@ -140,7 +140,7 @@ export const DatabaseTreeSidebar: React.FC = () => {
           <div className="flex items-center gap-4">
             <span>Connected</span>
             <span>•</span>
-            <span>Read-only mode</span>
+            <span>Database Name</span>
           </div>
           <button 
             onClick={handleRefresh}
