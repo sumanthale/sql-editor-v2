@@ -1,14 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
-  ChevronUp, 
-  ChevronDown, 
-  Filter, 
   X, 
   Search,
-  Calendar,
-  Hash,
-  Type,
-  MoreHorizontal,
   ArrowUpDown,
   SortAsc,
   SortDesc,
@@ -354,7 +347,6 @@ export function DataTable({
                     </div>
                   </th>
                 ))}
-                <th className="w-12 px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm divide-y divide-slate-200/60 dark:divide-slate-700/60">
@@ -398,11 +390,6 @@ export function DataTable({
                         )}
                       </td>
                     ))}
-                    <td className="px-4 py-3">
-                      <button className="p-1 hover:bg-slate-200/80 dark:hover:bg-slate-600/50 rounded transition-all duration-150">
-                        <MoreHorizontal size={14} />
-                      </button>
-                    </td>
                   </tr>
                 );
               })}

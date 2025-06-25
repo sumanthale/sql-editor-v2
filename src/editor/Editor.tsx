@@ -1,21 +1,22 @@
-import { useState, useCallback } from 'react';
-import { TopBar } from './components/Header/TopBar';
-import { EditorToolbar } from './components/Header/EditorToolbar';
-import { DatabaseTree } from './components/Sidebar/DatabaseTree';
-import { SqlEditor } from './components/Editor/SqlEditor';
-import { QueryResults } from './components/Results/QueryResults';
-import { ConnectionManager } from './components/Modals/ConnectionManager';
-import { ResizableHandle } from './components/Layout/ResizableHandle';
-import { useResizable } from './hooks/useResizable';
-import { DatabaseConnection, SqlTab, QueryResult } from '../types/database';
+import { useState, useCallback } from "react";
+import { TopBar } from "./components/Header/TopBar";
+import { EditorToolbar } from "./components/Header/EditorToolbar";
+import { DatabaseTree } from "./components/Sidebar/DatabaseTree";
+import { SqlEditor } from "./components/Editor/SqlEditor";
+import { QueryResults } from "./components/Results/QueryResults";
+import { ConnectionManager } from "./components/Modals/ConnectionManager";
+import { ResizableHandle } from "./components/Layout/ResizableHandle";
+import { useResizable } from "./hooks/useResizable";
+import { DatabaseConnection, SqlTab, QueryResult } from "../types/database";
 import {
   mockConnections,
   mockSchemas,
   mockQueryResults,
-} from '../data/mockData';
+} from "../data/mockData";
+import { format } from "sql-formatter";
 
 interface EditorProps {
-  setActiveView: (view: 'connections' | 'migration') => void;
+  setActiveView: (view: "connections" | "migration") => void;
 }
 
 const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
@@ -26,14 +27,14 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
     useState<DatabaseConnection | null>(mockConnections[0]);
   const [tabs, setTabs] = useState<SqlTab[]>([
     {
-      id: 'tab-1',
-      title: 'Query 1',
+      id: "tab-1",
+      title: "Query 1",
       content: "SELECT * FROM users WHERE created_at > '2024-01-01' LIMIT 10;",
       isActive: true,
       isDirty: false,
     },
   ]);
-  const [activeTabId, setActiveTabId] = useState<string>('tab-1');
+  const [activeTabId, setActiveTabId] = useState<string>("tab-1");
   const [queryResults, setQueryResults] =
     useState<QueryResult[]>(mockQueryResults);
   const [isQueryLoading, setIsQueryLoading] = useState(false);
@@ -46,14 +47,14 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
     initialSize: 280,
     minSize: 200,
     maxSize: 500,
-    direction: 'horizontal',
+    direction: "horizontal",
   });
 
   const resultsResize = useResizable({
     initialSize: 300,
     minSize: 200,
     maxSize: 600,
-    direction: 'vertical',
+    direction: "vertical",
   });
 
   // Handlers
@@ -77,58 +78,58 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
     const query = activeTab.content.toLowerCase().trim();
     let mockResult: QueryResult;
 
-    if (query.includes('select') && query.includes('users')) {
+    if (query.includes("select") && query.includes("users")) {
       mockResult = mockQueryResults[0];
-    } else if (query.includes('select') && query.includes('orders')) {
+    } else if (query.includes("select") && query.includes("orders")) {
       mockResult = {
         columns: [
-          { name: 'id', type: 'integer' },
-          { name: 'user_id', type: 'integer' },
-          { name: 'total_amount', type: 'decimal' },
-          { name: 'status', type: 'varchar' },
-          { name: 'order_date', type: 'date' },
-          { name: 'created_at', type: 'timestamp' },
+          { name: "id", type: "integer" },
+          { name: "user_id", type: "integer" },
+          { name: "total_amount", type: "decimal" },
+          { name: "status", type: "varchar" },
+          { name: "order_date", type: "date" },
+          { name: "created_at", type: "timestamp" },
         ],
         rows: [
           {
             id: 1,
             user_id: 1,
             total_amount: 99.99,
-            status: 'completed',
-            order_date: '2024-01-20',
-            created_at: '2024-01-20T10:30:00Z',
+            status: "completed",
+            order_date: "2024-01-20",
+            created_at: "2024-01-20T10:30:00Z",
           },
           {
             id: 2,
             user_id: 2,
             total_amount: 149.5,
-            status: 'pending',
-            order_date: '2024-01-20',
-            created_at: '2024-01-20T11:15:00Z',
+            status: "pending",
+            order_date: "2024-01-20",
+            created_at: "2024-01-20T11:15:00Z",
           },
           {
             id: 3,
             user_id: 1,
             total_amount: 75.25,
-            status: 'completed',
-            order_date: '2024-01-20',
-            created_at: '2024-01-20T14:22:00Z',
+            status: "completed",
+            order_date: "2024-01-20",
+            created_at: "2024-01-20T14:22:00Z",
           },
           {
             id: 4,
             user_id: 3,
             total_amount: 200.0,
-            status: 'shipped',
-            order_date: '2024-01-20',
-            created_at: '2024-01-20T16:45:00Z',
+            status: "shipped",
+            order_date: "2024-01-20",
+            created_at: "2024-01-20T16:45:00Z",
           },
           {
             id: 5,
             user_id: 2,
             total_amount: 89.99,
-            status: 'completed',
-            order_date: '2024-01-21',
-            created_at: '2024-01-21T09:30:00Z',
+            status: "completed",
+            order_date: "2024-01-21",
+            created_at: "2024-01-21T09:30:00Z",
           },
         ],
         totalRows: 5,
@@ -136,62 +137,62 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
         query: activeTab.content,
         timestamp: new Date(),
       };
-    } else if (query.includes('select') && query.includes('products')) {
+    } else if (query.includes("select") && query.includes("products")) {
       mockResult = {
         columns: [
-          { name: 'id', type: 'integer' },
-          { name: 'name', type: 'varchar' },
-          { name: 'price', type: 'decimal' },
-          { name: 'category_id', type: 'integer' },
-          { name: 'in_stock', type: 'boolean' },
-          { name: 'stock_quantity', type: 'integer' },
-          { name: 'created_at', type: 'timestamp' },
+          { name: "id", type: "integer" },
+          { name: "name", type: "varchar" },
+          { name: "price", type: "decimal" },
+          { name: "category_id", type: "integer" },
+          { name: "in_stock", type: "boolean" },
+          { name: "stock_quantity", type: "integer" },
+          { name: "created_at", type: "timestamp" },
         ],
         rows: [
           {
             id: 1,
-            name: 'Laptop Pro',
+            name: "Laptop Pro",
             price: 1299.99,
             category_id: 1,
             in_stock: true,
             stock_quantity: 15,
-            created_at: '2024-01-15T10:00:00Z',
+            created_at: "2024-01-15T10:00:00Z",
           },
           {
             id: 2,
-            name: 'Wireless Mouse',
+            name: "Wireless Mouse",
             price: 29.99,
             category_id: 2,
             in_stock: true,
             stock_quantity: 50,
-            created_at: '2024-01-15T10:30:00Z',
+            created_at: "2024-01-15T10:30:00Z",
           },
           {
             id: 3,
-            name: 'Mechanical Keyboard',
+            name: "Mechanical Keyboard",
             price: 149.99,
             category_id: 2,
             in_stock: false,
             stock_quantity: 0,
-            created_at: '2024-01-15T11:00:00Z',
+            created_at: "2024-01-15T11:00:00Z",
           },
           {
             id: 4,
-            name: 'Monitor 4K',
+            name: "Monitor 4K",
             price: 399.99,
             category_id: 3,
             in_stock: true,
             stock_quantity: 8,
-            created_at: '2024-01-15T11:30:00Z',
+            created_at: "2024-01-15T11:30:00Z",
           },
           {
             id: 5,
-            name: 'USB-C Hub',
+            name: "USB-C Hub",
             price: 79.99,
             category_id: 2,
             in_stock: true,
             stock_quantity: 25,
-            created_at: '2024-01-15T12:00:00Z',
+            created_at: "2024-01-15T12:00:00Z",
           },
         ],
         totalRows: 5,
@@ -221,7 +222,7 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
     const newTab: SqlTab = {
       id: newTabId,
       title: `Query ${tabs.length + 1}`,
-      content: '',
+      content: "",
       isActive: false,
       isDirty: false,
     };
@@ -275,7 +276,7 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
   );
 
   const handleSaveConnection = useCallback(
-    (connectionData: Omit<DatabaseConnection, 'id'>) => {
+    (connectionData: Omit<DatabaseConnection, "id">) => {
       const newConnection: DatabaseConnection = {
         ...connectionData,
         id: `conn-${Date.now()}`,
@@ -288,13 +289,26 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
   // Editor toolbar handlers
   const handleFormatQuery = useCallback(() => {
     // This would typically format the SQL query
-    console.log('Format query');
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    if (activeTab) {
+      const unformatted = activeTab.content; // Replace with actual formatting logic;
+
+      const formatted = format(unformatted, {
+        language: "sql", // "mysql", "postgresql", "sqlite", etc.
+      });
+
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === activeTabId ? { ...t, content: formatted, isDirty: true } : t
+        )
+      );
+    }
   }, []);
 
   const handleClearQuery = useCallback(() => {
     setTabs((prev) =>
       prev.map((t) =>
-        t.id === activeTabId ? { ...t, content: '', isDirty: true } : t
+        t.id === activeTabId ? { ...t, content: "", isDirty: true } : t
       )
     );
   }, [activeTabId]);
@@ -309,11 +323,11 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
   const handleExportQuery = useCallback(() => {
     const activeTab = tabs.find((t) => t.id === activeTabId);
     if (activeTab) {
-      const blob = new Blob([activeTab.content], { type: 'text/sql' });
+      const blob = new Blob([activeTab.content], { type: "text/sql" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `${activeTab.title.replace(/\s+/g, '_')}.sql`;
+      a.download = `${activeTab.title.replace(/\s+/g, "_")}.sql`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -392,7 +406,7 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
             style={{ height: `calc(100% - ${resultsResize.size}px - 4px)` }}
           >
             <SqlEditor
-              value={activeTab?.content || ''}
+              value={activeTab?.content || ""}
               onChange={handleEditorChange}
               onRunQuery={handleRunQuery}
               schemas={mockSchemas}
@@ -420,12 +434,7 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
         </div>
       </div>
 
-      {/* Connection Manager Modal */}
-      <ConnectionManager
-        isOpen={showConnectionManager}
-        onClose={() => setShowConnectionManager(false)}
-        onSave={handleSaveConnection}
-      />
+ 
     </div>
   );
 };

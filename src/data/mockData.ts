@@ -280,7 +280,7 @@ export const mockQueryResults: QueryResult[] = [
         is_active: true,
         created_at: '2023-12-20T12:30:45Z',
         last_login: '2024-01-20T16:20:30Z'
-      }
+      },
     ],
     totalRows: 10,
     executionTime: 25,

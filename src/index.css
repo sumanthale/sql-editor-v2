@@ -5,56 +5,56 @@
 /* Synchrony Financial Theme Variables */
 :root {
   /* Synchrony Brand Colors */
-  --synchrony-gold: #FBC600;
-  --charcoal-gray: #3B3C43;
-  --steel-gray: #94969A;
-  --dark-green: #3E8529;
-  --teal: #34657F;
-  --turquoise: #58A7AF;
-  --brick: #C63527;
-  --autumn: #D7BB00;
-  
+  --synchrony-gold: #fbc600;
+  --charcoal-gray: #3b3c43;
+  --steel-gray: #94969a;
+  --dark-green: #3e8529;
+  --teal: #34657f;
+  --turquoise: #58a7af;
+  --brick: #c63527;
+  --autumn: #d7bb00;
+
   /* Light Theme */
-  --bg-primary: #FFFFFF;
-  --bg-secondary: #F8F9FA;
-  --bg-tertiary: #F1F3F4;
-  --bg-accent: #FFF9E6;
-  --text-primary: #3B3C43;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f1f3f4;
+  --bg-accent: #fff9e6;
+  --text-primary: #3b3c43;
   --text-secondary: #666666;
-  --text-muted: #94969A;
-  --border-light: #E5E7EB;
-  --border-medium: #D1D5DB;
+  --text-muted: #94969a;
+  --border-light: #e5e7eb;
+  --border-medium: #d1d5db;
   --shadow-light: rgba(59, 60, 67, 0.1);
   --shadow-medium: rgba(59, 60, 67, 0.15);
   --shadow-heavy: rgba(59, 60, 67, 0.25);
-  
+
   /* Status Colors - Light */
-  --success: #3E8529;
-  --warning: #D7BB00;
-  --error: #C63527;
-  --info: #34657F;
+  --success: #3e8529;
+  --warning: #d7bb00;
+  --error: #c63527;
+  --info: #34657f;
 }
 
 .dark {
   /* Dark Theme */
-  --bg-primary: #1A1A1A;
-  --bg-secondary: #2D2D2D;
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
   --bg-tertiary: #404040;
-  --bg-accent: #2A2416;
-  --text-primary: #FFFFFF;
-  --text-secondary: #CCCCCC;
-  --text-muted: #94969A;
+  --bg-accent: #2a2416;
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --text-muted: #94969a;
   --border-light: #404040;
   --border-medium: #525252;
   --shadow-light: rgba(0, 0, 0, 0.2);
   --shadow-medium: rgba(0, 0, 0, 0.3);
   --shadow-heavy: rgba(0, 0, 0, 0.5);
-  
+
   /* Status Colors - Dark */
-  --success: #4ADE80;
-  --warning: #FBC600;
-  --error: #EF4444;
-  --info: #58A7AF;
+  --success: #4ade80;
+  --warning: #fbc600;
+  --error: #ef4444;
+  --info: #58a7af;
 }
 
 /* Custom Scrollbar */
@@ -90,78 +90,177 @@ body {
 }
 
 /* Custom utility classes */
-.bg-synchrony-gold { background-color: var(--synchrony-gold); }
-.bg-charcoal { background-color: var(--charcoal-gray); }
-.bg-steel { background-color: var(--steel-gray); }
-.bg-dark-green { background-color: var(--dark-green); }
-.bg-teal { background-color: var(--teal); }
-.bg-turquoise { background-color: var(--turquoise); }
-.bg-brick { background-color: var(--brick); }
-.bg-autumn { background-color: var(--autumn); }
+.bg-synchrony-gold {
+  background-color: var(--synchrony-gold);
+}
+.bg-charcoal {
+  background-color: var(--charcoal-gray);
+}
+.bg-steel {
+  background-color: var(--steel-gray);
+}
+.bg-dark-green {
+  background-color: var(--dark-green);
+}
+.bg-teal {
+  background-color: var(--teal);
+}
+.bg-turquoise {
+  background-color: var(--turquoise);
+}
+.bg-brick {
+  background-color: var(--brick);
+}
+.bg-autumn {
+  background-color: var(--autumn);
+}
 
-.text-synchrony-gold { color: var(--synchrony-gold); }
-.text-charcoal { color: var(--charcoal-gray); }
-.text-steel { color: var(--steel-gray); }
-.text-dark-green { color: var(--dark-green); }
-.text-teal { color: var(--teal); }
-.text-turquoise { color: var(--turquoise); }
-.text-brick { color: var(--brick); }
-.text-autumn { color: var(--autumn); }
+.text-synchrony-gold {
+  color: var(--synchrony-gold);
+}
+.text-charcoal {
+  color: var(--charcoal-gray);
+}
+.text-steel {
+  color: var(--steel-gray);
+}
+.text-dark-green {
+  color: var(--dark-green);
+}
+.text-teal {
+  color: var(--teal);
+}
+.text-turquoise {
+  color: var(--turquoise);
+}
+.text-brick {
+  color: var(--brick);
+}
+.text-autumn {
+  color: var(--autumn);
+}
 
-.border-synchrony-gold { border-color: var(--synchrony-gold); }
-.border-charcoal { border-color: var(--charcoal-gray); }
-.border-steel { border-color: var(--steel-gray); }
+.border-synchrony-gold {
+  border-color: var(--synchrony-gold);
+}
+.border-charcoal {
+  border-color: var(--charcoal-gray);
+}
+.border-steel {
+  border-color: var(--steel-gray);
+}
 
 /* Theme-aware backgrounds */
-.bg-theme-primary { background-color: var(--bg-primary); }
-.bg-theme-secondary { background-color: var(--bg-secondary); }
-.bg-theme-tertiary { background-color: var(--bg-tertiary); }
-.bg-theme-accent { background-color: var(--bg-accent); }
+.bg-theme-primary {
+  background-color: var(--bg-primary);
+}
+.bg-theme-secondary {
+  background-color: var(--bg-secondary);
+}
+.bg-theme-tertiary {
+  background-color: var(--bg-tertiary);
+}
+.bg-theme-accent {
+  background-color: var(--bg-accent);
+}
 
 /* Theme-aware text */
-.text-theme-primary { color: var(--text-primary); }
-.text-theme-secondary { color: var(--text-secondary); }
-.text-theme-muted { color: var(--text-muted); }
+.text-theme-primary {
+  color: var(--text-primary);
+}
+.text-theme-secondary {
+  color: var(--text-secondary);
+}
+.text-theme-muted {
+  color: var(--text-muted);
+}
 
 /* Theme-aware borders */
-.border-theme-light { border-color: var(--border-light); }
-.border-theme-medium { border-color: var(--border-medium); }
+.border-theme-light {
+  border-color: var(--border-light);
+}
+.border-theme-medium {
+  border-color: var(--border-medium);
+}
 
 /* Theme-aware shadows */
-.shadow-theme-light { box-shadow: 0 1px 3px var(--shadow-light); }
-.shadow-theme-medium { box-shadow: 0 4px 6px var(--shadow-medium); }
-.shadow-theme-heavy { box-shadow: 0 10px 15px var(--shadow-heavy); }
+.shadow-theme-light {
+  box-shadow: 0 1px 3px var(--shadow-light);
+}
+.shadow-theme-medium {
+  box-shadow: 0 4px 6px var(--shadow-medium);
+}
+.shadow-theme-heavy {
+  box-shadow: 0 10px 15px var(--shadow-heavy);
+}
 
 /* Status colors */
-.text-success { color: var(--success); }
-.text-warning { color: var(--warning); }
-.text-error { color: var(--error); }
-.text-info { color: var(--info); }
+.text-success {
+  color: var(--success);
+}
+.text-warning {
+  color: var(--warning);
+}
+.text-error {
+  color: var(--error);
+}
+.text-info {
+  color: var(--info);
+}
 
-.bg-success { background-color: var(--success); }
-.bg-warning { background-color: var(--warning); }
-.bg-error { background-color: var(--error); }
-.bg-info { background-color: var(--info); }
+.bg-success {
+  background-color: var(--success);
+}
+.bg-warning {
+  background-color: var(--warning);
+}
+.bg-error {
+  background-color: var(--error);
+}
+.bg-info {
+  background-color: var(--info);
+}
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideIn {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
-.animate-fade-in { animation: fadeIn 0.3s ease-out; }
-.animate-slide-in { animation: slideIn 0.3s ease-out; }
-.animate-pulse { animation: pulse 2s infinite; }
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
 
 /* Focus styles */
 .focus-synchrony:focus {
@@ -176,7 +275,11 @@ body {
 
 /* Custom button styles */
 .btn-synchrony-primary {
-  background: linear-gradient(135deg, var(--synchrony-gold) 0%, var(--autumn) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--synchrony-gold) 0%,
+    var(--autumn) 100%
+  );
   color: var(--charcoal-gray);
   font-weight: 600;
   border: none;
@@ -254,43 +357,73 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Gradient backgrounds */
 .gradient-synchrony {
   /* background: linear-gradient(135deg, var(--synchrony-gold) 0%, var(--autumn) 50%, var(--teal) 100%); */
-  background:  var(--synchrony-gold);
+  background: var(--synchrony-gold);
 }
 
 .gradient-synchrony-subtle {
-  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-accent) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--bg-secondary) 0%,
+    var(--bg-accent) 100%
+  );
 }
 
 /* Environment badges */
-.badge-dev { background-color: var(--dark-green); }
-.badge-qa { background-color: var(--teal); }
-.badge-staging { background-color: var(--autumn); }
-.badge-uat { background-color: var(--turquoise); }
-.badge-prod { background-color: var(--brick); }
+.badge-dev {
+  background-color: var(--dark-green);
+}
+.badge-qa {
+  background-color: var(--teal);
+}
+.badge-staging {
+  background-color: var(--autumn);
+}
+.badge-uat {
+  background-color: var(--turquoise);
+}
+.badge-prod {
+  background-color: var(--brick);
+}
 
 /* Database type indicators */
-.db-postgresql { color: var(--teal); }
-.db-mysql { color: var(--autumn); }
-.db-oracle { color: var(--brick); }
+.db-postgresql {
+  color: var(--teal);
+}
+.db-mysql {
+  color: var(--autumn);
+}
+.db-oracle {
+  color: var(--brick);
+}
 
 /* Status indicators */
-.status-connected { color: var(--success); }
-.status-disconnected { color: var(--error); }
-.status-connecting { color: var(--warning); }
+.status-connected {
+  color: var(--success);
+}
+.status-disconnected {
+  color: var(--error);
+}
+.status-connecting {
+  color: var(--warning);
+}
 
 /* Responsive design helpers */
 @media (max-width: 768px) {
   .card-synchrony {
     border-radius: 8px;
   }
-  
+
   .shadow-theme-medium {
     box-shadow: 0 2px 4px var(--shadow-light);
   }
@@ -303,9 +436,16 @@ body {
   .bg-theme-tertiary {
     background-color: white !important;
   }
-  
+
   .text-theme-primary,
   .text-theme-secondary {
     color: black !important;
   }
+}
+.no-scroll::-webkit-scrollbar {
+  display: none;
+}
+.no-scroll {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
