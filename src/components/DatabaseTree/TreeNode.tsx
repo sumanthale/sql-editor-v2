@@ -8,15 +8,9 @@ import {
   Zap,
   Folder,
   FolderOpen,
-  Key,
-  Link,
-  Circle,
-  FileText,
   Loader,
   Code,
   Play,
-  TableProperties,
-  Diamond,
 } from "lucide-react";
 import {
   TreeNode as TreeNodeType,
@@ -62,10 +56,6 @@ const getNodeIcon = (
       return <Code {...iconProps} className="text-indigo-500 flex-shrink-0" />;
     case "trigger":
       return <Play {...iconProps} className="text-red-500 flex-shrink-0" />;
-    case "column":
-      return (
-        <Diamond {...iconProps} className="text-slate-400 flex-shrink-0" />
-      );
     case "folder":
       return isExpanded ? (
         <FolderOpen {...iconProps} className="text-slate-500 flex-shrink-0" />
@@ -74,7 +64,7 @@ const getNodeIcon = (
       );
     default:
       return (
-        <FileText {...iconProps} className="text-slate-400 flex-shrink-0" />
+        <Database {...iconProps} className="text-slate-400 flex-shrink-0" />
       );
   }
 };
@@ -133,12 +123,24 @@ export const TreeNode = memo<TreeNodeProps>(
       }
     };
 
+    const handleNodeClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      
+      // If it has children, toggle expansion
+      if (hasChildren) {
+        onToggle(node.id);
+      }
+      
+      // Always call onNodeSelect for potential actions
+      onNodeSelect(node);
+    };
+
     return (
       <div>
         <div
           className={getNodeStyles(node.type, level)}
           style={{ paddingLeft: `${paddingLeft}px` }}
-          onClick={handleToggle}
+          onClick={handleNodeClick}
         >
           {/* Expand/Collapse Icon */}
           <div className="w-4 h-4 flex items-center justify-center">
@@ -167,73 +169,20 @@ export const TreeNode = memo<TreeNodeProps>(
 
           {/* Loading indicator */}
           {node.isLoading && (
-            <span className="text-xs text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2  rounded-sm">
+            <span className="text-xs text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-sm">
               Loading...
             </span>
           )}
 
-          {/* Metadata Badge */}
-          {node.metadata?.dataType && (
-            <span className="text-xs bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300 px-2  rounded-sm font-mono">
-              {node.metadata.dataType}
-            </span>
-          )}
-
           {/* Return Type Badge for Functions */}
-          {node.metadata?.returnType && (
-            <span className="text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-2  rounded-sm font-mono">
+          {/* {node.metadata?.returnType && (
+            <span className="text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-sm font-mono">
               → {node.metadata.returnType}
             </span>
-          )}
-
-          {/* Primary Key Indicator */}
-          {/* {node.metadata?.isPrimaryKey && (
-            <Key size={10} className="text-yellow-500" />
           )} */}
-
-          {/* Foreign Key Indicator */}
-          {/* {node.metadata?.isForeignKey && (
-            <Link size={10} className="text-blue-500" />
-          )} */}
-
-          {["table", "view", "procedure", "function", "trigger"].includes(
-            node.type
-          ) && (
-            <span
-              className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2  rounded-md"
-              onClick={(e) => {
-                e.stopPropagation();
-                onNodeSelect(node);
-              }}
-            >
-              <TableProperties size={14} className="inline" />
-            </span>
-          )}
         </div>
 
         {/* Children */}
-        {/* {hasChildren && isExpanded && (
-          <>
-            {!node.isLoaded ? (
-              <div className="ml-6 text-xs text-slate-500">
-                Loading children...
-              </div>
-            ) : (
-              <div className="space-y-0.5">
-                {node.children?.map((child) => (
-                  <TreeNode
-                    key={child.id}
-                    node={child}
-                    level={level + 1}
-                    isExpanded={expandedNodes.has(child.id)}
-                    onToggle={onToggle}
-                    searchQuery={searchQuery}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )} */}
         {hasChildren && isExpanded && node.children && node.isLoaded && (
           <div className="space-y-0.5">
             {node.children.map((child) => (

@@ -22,6 +22,32 @@ export interface TreeNode {
   };
 }
 
+export interface TableColumn {
+  name: string;
+  dataType: string;
+  nullable: boolean;
+  isPrimaryKey?: boolean;
+  isForeignKey?: boolean;
+  defaultValue?: string;
+  description?: string;
+}
+
+export interface TableIndex {
+  name: string;
+  type: 'PRIMARY' | 'UNIQUE' | 'INDEX' | 'FOREIGN';
+  columns: string[];
+  isUnique: boolean;
+  description?: string;
+}
+
+export interface TableInfo {
+  schemaName: string;
+  tableName: string;
+  columns: TableColumn[];
+  indexes: TableIndex[];
+  rowCount?: number;
+}
+
 interface ApiResponse<T> {
   data: T;
   error?: string;
@@ -56,6 +82,14 @@ interface ColumnData {
   nullable: boolean;
   is_primary_key?: boolean;
   is_foreign_key?: boolean;
+  default_value?: string;
+}
+
+interface IndexData {
+  index_name: string;
+  index_type: 'PRIMARY' | 'UNIQUE' | 'INDEX' | 'FOREIGN';
+  columns: string[];
+  is_unique: boolean;
 }
 
 interface DatabaseTreeState {
@@ -63,6 +97,11 @@ interface DatabaseTreeState {
   expandedNodes: Set<string>;
   searchQuery: string;
   filteredTree: TreeNode[];
+  
+  // Bottom panel state
+  selectedTable: TableInfo | null;
+  isInfoPanelOpen: boolean;
+  activeInfoTab: 'columns' | 'indexes';
   
   // Cache for API responses
   schemasCache: Map<string, {
@@ -72,7 +111,7 @@ interface DatabaseTreeState {
     functions: FunctionData[];
     triggers: TriggerData[];
   }>;
-  columnsCache: Map<string, ColumnData[]>; // key: schemaName.tableName
+  tableInfoCache: Map<string, TableInfo>; // key: schemaName.tableName
   
   // Actions
   setSearchQuery: (query: string) => void;
@@ -87,9 +126,15 @@ interface DatabaseTreeState {
   setNodeLoading: (nodeId: string, isLoading: boolean) => void;
   loadSchemas: () => Promise<void>;
   loadSchemaContents: (schemaName: string) => Promise<void>;
-  loadTableColumns: (schemaName: string, tableName: string) => Promise<void>;
+  loadTableInfo: (schemaName: string, tableName: string) => Promise<void>;
   onNodeSelect: (node: TreeNode) => void;
   loadNodeChildren: (nodeId: string, node: TreeNode) => Promise<void>;
+  
+  // Bottom panel actions
+  setSelectedTable: (tableInfo: TableInfo | null) => void;
+  setInfoPanelOpen: (isOpen: boolean) => void;
+  setActiveInfoTab: (tab: 'columns' | 'indexes') => void;
+  closeInfoPanel: () => void;
 }
 
 // Mock API functions - replace these with actual API calls
@@ -98,7 +143,7 @@ const mockApiDelay = () => new Promise(resolve => setTimeout(resolve, 800));
 const mockGetSchemas = async (): Promise<ApiResponse<string[]>> => {
   await mockApiDelay();
   return {
-    data: ['public', 'information_schema', 'pg_catalog'],
+    data: ['deptdb', 'empdb', 'public'],
     success: true
   };
 };
@@ -106,9 +151,23 @@ const mockGetSchemas = async (): Promise<ApiResponse<string[]>> => {
 const mockGetTables = async (schemaName: string): Promise<ApiResponse<string[]>> => {
   await mockApiDelay();
   
+  if (schemaName === 'deptdb') {
+    return {
+      data: ['customers', 'department', 'employee', 'orders', 'products', 'products_ordered', 'salesperson'],
+      success: true
+    };
+  }
+  
+  if (schemaName === 'empdb') {
+    return {
+      data: ['employees', 'departments', 'projects'],
+      success: true
+    };
+  }
+  
   if (schemaName === 'public') {
     return {
-      data: ['users', 'orders', 'products', 'categories', 'order_items', 'customers'],
+      data: ['users', 'sessions', 'logs'],
       success: true
     };
   }
@@ -122,16 +181,16 @@ const mockGetTables = async (schemaName: string): Promise<ApiResponse<string[]>>
 const mockGetViews = async (schemaName: string): Promise<ApiResponse<ViewData[]>> => {
   await mockApiDelay();
   
-  if (schemaName === 'public') {
+  if (schemaName === 'deptdb') {
     return {
       data: [
         {
-          view_name: 'user_orders_summary',
-          view_definition: 'SELECT u.id, u.name, COUNT(o.id) as order_count FROM users u LEFT JOIN orders o ON u.id = o.user_id GROUP BY u.id, u.name'
+          view_name: 'employee_summary',
+          view_definition: 'SELECT e.id, e.name, d.department_name FROM employee e JOIN department d ON e.department_id = d.id'
         },
         {
-          view_name: 'monthly_sales',
-          view_definition: 'SELECT DATE_TRUNC(\'month\', order_date) as month, SUM(total_amount) as total_sales FROM orders GROUP BY DATE_TRUNC(\'month\', order_date)'
+          view_name: 'sales_report',
+          view_definition: 'SELECT p.name, SUM(po.quantity) as total_sold FROM products p JOIN products_ordered po ON p.id = po.product_id GROUP BY p.name'
         }
       ],
       success: true
@@ -147,12 +206,12 @@ const mockGetViews = async (schemaName: string): Promise<ApiResponse<ViewData[]>
 const mockGetProcedures = async (schemaName: string): Promise<ApiResponse<ProcedureData[]>> => {
   await mockApiDelay();
   
-  if (schemaName === 'public') {
+  if (schemaName === 'deptdb') {
     return {
       data: [
         {
-          procedure_name: 'update_user_status',
-          procedure_definition: 'CREATE OR REPLACE PROCEDURE update_user_status(user_id INT, new_status VARCHAR) AS $$ BEGIN UPDATE users SET status = new_status WHERE id = user_id; END; $$ LANGUAGE plpgsql;'
+          procedure_name: 'update_employee_department',
+          procedure_definition: 'CREATE OR REPLACE PROCEDURE update_employee_department(emp_id INT, dept_id INT) AS $$ BEGIN UPDATE employee SET department_id = dept_id WHERE id = emp_id; END; $$ LANGUAGE plpgsql;'
         },
         {
           procedure_name: 'process_order',
@@ -172,18 +231,18 @@ const mockGetProcedures = async (schemaName: string): Promise<ApiResponse<Proced
 const mockGetFunctions = async (schemaName: string): Promise<ApiResponse<FunctionData[]>> => {
   await mockApiDelay();
   
-  if (schemaName === 'public') {
+  if (schemaName === 'deptdb') {
     return {
       data: [
         {
-          function_name: 'calculate_total_revenue',
-          function_definition: 'CREATE OR REPLACE FUNCTION calculate_total_revenue() RETURNS DECIMAL AS $$ BEGIN RETURN (SELECT SUM(total_amount) FROM orders WHERE status = \'completed\'); END; $$ LANGUAGE plpgsql;',
-          function_return: 'DECIMAL'
+          function_name: 'get_employee_count',
+          function_definition: 'CREATE OR REPLACE FUNCTION get_employee_count(dept_id INT) RETURNS INT AS $$ BEGIN RETURN (SELECT COUNT(*) FROM employee WHERE department_id = dept_id); END; $$ LANGUAGE plpgsql;',
+          function_return: 'INT'
         },
         {
-          function_name: 'get_user_orders',
-          function_definition: 'CREATE OR REPLACE FUNCTION get_user_orders(user_id INT) RETURNS TABLE(order_id INT, total_amount DECIMAL, order_date DATE) AS $$ BEGIN RETURN QUERY SELECT id, total_amount, order_date FROM orders WHERE user_id = $1; END; $$ LANGUAGE plpgsql;',
-          function_return: 'TABLE'
+          function_name: 'calculate_total_sales',
+          function_definition: 'CREATE OR REPLACE FUNCTION calculate_total_sales() RETURNS DECIMAL AS $$ BEGIN RETURN (SELECT SUM(total_amount) FROM orders WHERE status = \'completed\'); END; $$ LANGUAGE plpgsql;',
+          function_return: 'DECIMAL'
         }
       ],
       success: true
@@ -199,13 +258,13 @@ const mockGetFunctions = async (schemaName: string): Promise<ApiResponse<Functio
 const mockGetTriggers = async (schemaName: string): Promise<ApiResponse<TriggerData[]>> => {
   await mockApiDelay();
   
-  if (schemaName === 'public') {
+  if (schemaName === 'deptdb') {
     return {
       data: [
         {
-          trigger_name: 'update_modified_time',
-          trigger_definition: 'CREATE TRIGGER update_modified_time BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_modified_column();',
-          table_name: 'users'
+          trigger_name: 'update_employee_modified',
+          trigger_definition: 'CREATE TRIGGER update_employee_modified BEFORE UPDATE ON employee FOR EACH ROW EXECUTE FUNCTION update_modified_column();',
+          table_name: 'employee'
         },
         {
           trigger_name: 'log_order_changes',
@@ -223,40 +282,89 @@ const mockGetTriggers = async (schemaName: string): Promise<ApiResponse<TriggerD
   };
 };
 
-const mockGetTableColumns = async (schemaName: string, tableName: string): Promise<ApiResponse<ColumnData[]>> => {
+const mockGetTableInfo = async (schemaName: string, tableName: string): Promise<ApiResponse<{ columns: ColumnData[], indexes: IndexData[] }>> => {
   await mockApiDelay();
   
-  const columnData: Record<string, ColumnData[]> = {
-    users: [
-      { column_name: 'id', data_type: 'integer', nullable: false, is_primary_key: true },
-      { column_name: 'email', data_type: 'varchar(255)', nullable: false },
-      { column_name: 'name', data_type: 'varchar(100)', nullable: false },
-      { column_name: 'age', data_type: 'integer', nullable: true },
-      { column_name: 'is_active', data_type: 'boolean', nullable: false },
-      { column_name: 'created_at', data_type: 'timestamp', nullable: false },
-      { column_name: 'updated_at', data_type: 'timestamp', nullable: true }
-    ],
-    orders: [
-      { column_name: 'id', data_type: 'integer', nullable: false, is_primary_key: true },
-      { column_name: 'user_id', data_type: 'integer', nullable: false, is_foreign_key: true },
-      { column_name: 'total_amount', data_type: 'decimal(10,2)', nullable: false },
-      { column_name: 'status', data_type: 'varchar(50)', nullable: false },
-      { column_name: 'order_date', data_type: 'date', nullable: false },
-      { column_name: 'created_at', data_type: 'timestamp', nullable: false }
-    ],
-    products: [
-      { column_name: 'id', data_type: 'integer', nullable: false, is_primary_key: true },
-      { column_name: 'name', data_type: 'varchar(255)', nullable: false },
-      { column_name: 'price', data_type: 'decimal(10,2)', nullable: false },
-      { column_name: 'description', data_type: 'text', nullable: true },
-      { column_name: 'category_id', data_type: 'integer', nullable: false, is_foreign_key: true },
-      { column_name: 'in_stock', data_type: 'boolean', nullable: false },
-      { column_name: 'created_at', data_type: 'timestamp', nullable: false }
-    ]
+  const tableData: Record<string, { columns: ColumnData[], indexes: IndexData[] }> = {
+    department: {
+      columns: [
+        { column_name: 'departmentid', data_type: 'int', nullable: false, is_primary_key: true },
+        { column_name: 'departmentname', data_type: 'varchar(25)', nullable: false },
+        { column_name: 'locationid', data_type: 'int', nullable: true }
+      ],
+      indexes: [
+        { index_name: 'pk_department', index_type: 'PRIMARY', columns: ['departmentid'], is_unique: true },
+        { index_name: 'idx_dept_name', index_type: 'INDEX', columns: ['departmentname'], is_unique: false },
+        { index_name: 'fk_location', index_type: 'FOREIGN', columns: ['locationid'], is_unique: false }
+      ]
+    },
+    employee: {
+      columns: [
+        { column_name: 'id', data_type: 'int', nullable: false, is_primary_key: true },
+        { column_name: 'name', data_type: 'varchar(50)', nullable: false },
+        { column_name: 'email', data_type: 'varchar(100)', nullable: false },
+        { column_name: 'department_id', data_type: 'int', nullable: true, is_foreign_key: true },
+        { column_name: 'salary', data_type: 'decimal(10,2)', nullable: true },
+        { column_name: 'hire_date', data_type: 'date', nullable: false },
+        { column_name: 'created_at', data_type: 'timestamp', nullable: false, default_value: 'CURRENT_TIMESTAMP' }
+      ],
+      indexes: [
+        { index_name: 'pk_employee', index_type: 'PRIMARY', columns: ['id'], is_unique: true },
+        { index_name: 'uk_employee_email', index_type: 'UNIQUE', columns: ['email'], is_unique: true },
+        { index_name: 'idx_employee_dept', index_type: 'INDEX', columns: ['department_id'], is_unique: false },
+        { index_name: 'fk_employee_dept', index_type: 'FOREIGN', columns: ['department_id'], is_unique: false }
+      ]
+    },
+    customers: {
+      columns: [
+        { column_name: 'id', data_type: 'int', nullable: false, is_primary_key: true },
+        { column_name: 'first_name', data_type: 'varchar(50)', nullable: false },
+        { column_name: 'last_name', data_type: 'varchar(50)', nullable: false },
+        { column_name: 'email', data_type: 'varchar(100)', nullable: false },
+        { column_name: 'phone', data_type: 'varchar(20)', nullable: true },
+        { column_name: 'created_at', data_type: 'timestamp', nullable: false }
+      ],
+      indexes: [
+        { index_name: 'pk_customers', index_type: 'PRIMARY', columns: ['id'], is_unique: true },
+        { index_name: 'uk_customer_email', index_type: 'UNIQUE', columns: ['email'], is_unique: true },
+        { index_name: 'idx_customer_name', index_type: 'INDEX', columns: ['last_name', 'first_name'], is_unique: false }
+      ]
+    },
+    orders: {
+      columns: [
+        { column_name: 'id', data_type: 'int', nullable: false, is_primary_key: true },
+        { column_name: 'customer_id', data_type: 'int', nullable: false, is_foreign_key: true },
+        { column_name: 'total_amount', data_type: 'decimal(10,2)', nullable: false },
+        { column_name: 'status', data_type: 'varchar(20)', nullable: false, default_value: 'pending' },
+        { column_name: 'order_date', data_type: 'date', nullable: false },
+        { column_name: 'created_at', data_type: 'timestamp', nullable: false }
+      ],
+      indexes: [
+        { index_name: 'pk_orders', index_type: 'PRIMARY', columns: ['id'], is_unique: true },
+        { index_name: 'idx_orders_customer', index_type: 'INDEX', columns: ['customer_id'], is_unique: false },
+        { index_name: 'idx_orders_date', index_type: 'INDEX', columns: ['order_date'], is_unique: false },
+        { index_name: 'fk_orders_customer', index_type: 'FOREIGN', columns: ['customer_id'], is_unique: false }
+      ]
+    },
+    products: {
+      columns: [
+        { column_name: 'id', data_type: 'int', nullable: false, is_primary_key: true },
+        { column_name: 'name', data_type: 'varchar(100)', nullable: false },
+        { column_name: 'price', data_type: 'decimal(10,2)', nullable: false },
+        { column_name: 'description', data_type: 'text', nullable: true },
+        { column_name: 'category_id', data_type: 'int', nullable: true, is_foreign_key: true },
+        { column_name: 'in_stock', data_type: 'boolean', nullable: false, default_value: 'true' }
+      ],
+      indexes: [
+        { index_name: 'pk_products', index_type: 'PRIMARY', columns: ['id'], is_unique: true },
+        { index_name: 'idx_products_name', index_type: 'INDEX', columns: ['name'], is_unique: false },
+        { index_name: 'idx_products_category', index_type: 'INDEX', columns: ['category_id'], is_unique: false }
+      ]
+    }
   };
 
   return {
-    data: columnData[tableName] || [],
+    data: tableData[tableName] || { columns: [], indexes: [] },
     success: true
   };
 };
@@ -330,8 +438,11 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
     expandedNodes: new Set(),
     searchQuery: '',
     filteredTree: [],
+    selectedTable: null,
+    isInfoPanelOpen: false,
+    activeInfoTab: 'columns',
     schemasCache: new Map(),
-    columnsCache: new Map(),
+    tableInfoCache: new Map(),
 
     setSearchQuery: (query: string) => {
       set((state) => {
@@ -494,6 +605,26 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
       });
     },
 
+    // Bottom panel actions
+    setSelectedTable: (tableInfo: TableInfo | null) => {
+      set({ selectedTable: tableInfo });
+    },
+
+    setInfoPanelOpen: (isOpen: boolean) => {
+      set({ isInfoPanelOpen: isOpen });
+    },
+
+    setActiveInfoTab: (tab: 'columns' | 'indexes') => {
+      set({ activeInfoTab: tab });
+    },
+
+    closeInfoPanel: () => {
+      set({ 
+        isInfoPanelOpen: false,
+        selectedTable: null 
+      });
+    },
+
     // API Methods
     loadSchemas: async () => {
       try {
@@ -533,8 +664,8 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
               id: `table-${schemaName}-${tableName}`,
               name: tableName,
               type: 'table' as const,
-              hasChildren: true,
-              isLoaded: false,
+              hasChildren: false, // Tables don't have children in tree view
+              isLoaded: true,
               metadata: { schemaName, tableName },
               children: []
             }))
@@ -558,7 +689,7 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
           },
           {
             id: `folder-procedures-${schemaName}`,
-            name: 'Procedures',
+            name: 'Stored Procedures',
             type: 'folder' as const,
             hasChildren: cached.procedures.length > 0,
             isLoaded: true,
@@ -593,27 +724,6 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
               },
               children: []
             }))
-          },
-          {
-            id: `folder-triggers-${schemaName}`,
-            name: 'Triggers',
-            type: 'folder' as const,
-            hasChildren: cached.triggers.length > 0,
-            isLoaded: true,
-            metadata: { schemaName },
-            children: cached.triggers.map(trigger => ({
-              id: `trigger-${schemaName}-${trigger.trigger_name}`,
-              name: trigger.trigger_name,
-              type: 'trigger' as const,
-              hasChildren: false,
-              isLoaded: true,
-              metadata: { 
-                schemaName, 
-                definition: trigger.trigger_definition,
-                tableName: trigger.table_name
-              },
-              children: []
-            }))
           }
         ];
         
@@ -624,7 +734,7 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
       try {
         get().setNodeLoading(nodeId, true);
         
-        // Make all 5 API calls in parallel
+        // Make all API calls in parallel
         const [tablesRes, viewsRes, proceduresRes, functionsRes, triggersRes] = await Promise.all([
           mockGetTables(schemaName),
           mockGetViews(schemaName),
@@ -656,8 +766,8 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
                 id: `table-${schemaName}-${tableName}`,
                 name: tableName,
                 type: 'table' as const,
-                hasChildren: true,
-                isLoaded: false,
+                hasChildren: false, // Tables don't have children in tree view
+                isLoaded: true,
                 metadata: { schemaName, tableName },
                 children: []
               }))
@@ -681,7 +791,7 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
             },
             {
               id: `folder-procedures-${schemaName}`,
-              name: 'Procedures',
+              name: 'Stored Procedures',
               type: 'folder' as const,
               hasChildren: proceduresRes.data.length > 0,
               isLoaded: true,
@@ -716,27 +826,6 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
                 },
                 children: []
               }))
-            },
-            {
-              id: `folder-triggers-${schemaName}`,
-              name: 'Triggers',
-              type: 'folder' as const,
-              hasChildren: triggersRes.data.length > 0,
-              isLoaded: true,
-              metadata: { schemaName },
-              children: triggersRes.data.map(trigger => ({
-                id: `trigger-${schemaName}-${trigger.trigger_name}`,
-                name: trigger.trigger_name,
-                type: 'trigger' as const,
-                hasChildren: false,
-                isLoaded: true,
-                metadata: { 
-                  schemaName, 
-                  definition: trigger.trigger_definition,
-                  tableName: trigger.table_name
-                },
-                children: []
-              }))
             }
           ];
 
@@ -748,77 +837,62 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
       }
     },
 
-    loadTableColumns: async (schemaName: string, tableName: string) => {
-      const nodeId = `table-${schemaName}-${tableName}`;
+    loadTableInfo: async (schemaName: string, tableName: string) => {
       const cacheKey = `${schemaName}.${tableName}`;
       const state = get();
       
       // Check if already cached
-      if (state.columnsCache.has(cacheKey)) {
-        const cached = state.columnsCache.get(cacheKey)!;
-        const children = cached.map(col => ({
-          id: `column-${schemaName}-${tableName}-${col.column_name}`,
-          name: col.column_name,
-          type: 'column' as const,
-          hasChildren: false,
-          isLoaded: true,
-          metadata: {
-            dataType: col.data_type,
-            nullable: col.nullable,
-            isPrimaryKey: col.is_primary_key,
-            isForeignKey: col.is_foreign_key,
-            schemaName,
-            tableName
-          },
-          children: []
-        }));
-        
-        get().updateNodeChildren(nodeId, children);
+      if (state.tableInfoCache.has(cacheKey)) {
+        const cached = state.tableInfoCache.get(cacheKey)!;
+        get().setSelectedTable(cached);
+        get().setInfoPanelOpen(true);
         return;
       }
 
       try {
-        get().setNodeLoading(nodeId, true);
-        const response = await mockGetTableColumns(schemaName, tableName);
+        const response = await mockGetTableInfo(schemaName, tableName);
         
         if (response.success) {
-          // Cache the results
-          state.columnsCache.set(cacheKey, response.data);
-          
-          const children = response.data.map(col => ({
-            id: `column-${schemaName}-${tableName}-${col.column_name}`,
-            name: col.column_name,
-            type: 'column' as const,
-            hasChildren: false,
-            isLoaded: true,
-            metadata: {
+          const tableInfo: TableInfo = {
+            schemaName,
+            tableName,
+            columns: response.data.columns.map(col => ({
+              name: col.column_name,
               dataType: col.data_type,
               nullable: col.nullable,
               isPrimaryKey: col.is_primary_key,
               isForeignKey: col.is_foreign_key,
-              schemaName,
-              tableName
-            },
-            children: []
-          }));
+              defaultValue: col.default_value
+            })),
+            indexes: response.data.indexes.map(idx => ({
+              name: idx.index_name,
+              type: idx.index_type,
+              columns: idx.columns,
+              isUnique: idx.is_unique
+            }))
+          };
           
-          get().updateNodeChildren(nodeId, children);
+          // Cache the results
+          state.tableInfoCache.set(cacheKey, tableInfo);
+          
+          get().setSelectedTable(tableInfo);
+          get().setInfoPanelOpen(true);
         }
       } catch (error) {
-        console.error('Failed to load table columns:', error);
-        get().setNodeLoading(nodeId, false);
+        console.error('Failed to load table info:', error);
       }
     },
 
     onNodeSelect: (node: TreeNode) => {
+      if (node.type === 'table' && node.metadata?.schemaName && node.metadata?.tableName) {
+        // Load table info and show in bottom panel
+        get().loadTableInfo(node.metadata.schemaName, node.metadata.tableName);
+        return;
+      }
+
       let definition = '';
       
       switch (node.type) {
-        case 'table':
-          if (node.metadata?.schemaName && node.metadata?.tableName) {
-            definition = `SELECT * FROM ${node.metadata.schemaName}.${node.metadata.tableName};`;
-          }
-          break;
         case 'view':
         case 'procedure':
         case 'function':
@@ -842,11 +916,6 @@ export const useDatabaseTreeStore = create<DatabaseTreeState>()(
 
         if (node.type === 'schema') {
           await get().loadSchemaContents(node.name);
-        } else if (node.type === 'table') {
-          const { schemaName, tableName } = node.metadata || {};
-          if (schemaName && tableName) {
-            await get().loadTableColumns(schemaName, tableName);
-          }
         }
       } catch (error) {
         console.error('Failed to load node children:', error);
