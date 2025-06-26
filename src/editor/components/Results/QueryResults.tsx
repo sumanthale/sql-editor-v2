@@ -4,6 +4,7 @@ import {
   RotateCcw,
   Play,
   CheckCircle2,
+  Zap,
 } from "lucide-react";
 import { DataTable } from "../DataTable/DataTable";
 import { QueryResult } from "../../../types/database";
@@ -20,8 +21,6 @@ export function QueryResults({
   lastExecuted,
 }: QueryResultsProps) {
   const currentResult = results[0]; // Show the most recent query result
-
-
 
   if (isLoading) {
     return (
@@ -106,26 +105,23 @@ export function QueryResults({
           <div className="flex items-center gap-4">
             <div
               title={currentResult.query}
-              className="text-xs text-slate-600 dark:text-slate-400 font-mono truncate w-[76%] bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg"
+              className="text-xs text-slate-600 dark:text-slate-400 font-mono truncate w-[52vw] bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg"
             >
               {currentResult.query}
             </div>
 
             <div className="flex items-center gap-4 ml-auto">
-           
-
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200/50 dark:border-emerald-800/50">
+              <div className="flex items-center gap-2 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200/50 dark:border-emerald-800/50">
                 <Clock size={14} className="text-emerald-500" />
-                <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                   {currentResult.executionTime}ms
                 </span>
               </div>
 
               {lastExecuted && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200/50 dark:border-purple-800/50">
-                  <Play size={14} className="text-purple-500" />
-                  <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
-                    {lastExecuted.toLocaleTimeString()}
+                <div className="flex items-center gap-2 px-2 py-1 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200/50 dark:border-purple-800/50">
+                  <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">
+                    @ {lastExecuted.toLocaleTimeString()}
                   </span>
                 </div>
               )}

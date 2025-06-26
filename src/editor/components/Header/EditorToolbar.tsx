@@ -120,13 +120,7 @@ export function EditorToolbar({
         >
           <Upload size={14} />
         </button>
-        <button
-          onClick={handleImportClick}
-          className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg text-xs font-medium transition-all duration-200"
-          title="Import Query"
-        >
-          <Upload size={14} />
-        </button>
+       
         <input
           ref={fileInputRef}
           type="file"
