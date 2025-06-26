@@ -275,7 +275,6 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
     [activeTabId]
   );
 
-
   // Editor toolbar handlers
   const handleFormatQuery = useCallback(() => {
     // This would typically format the SQL query
@@ -339,21 +338,6 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-slate-900 dark:text-slate-100 transition-all duration-300">
       {/* Top Bar */}
-      <TopBar
-        connections={connections}
-        activeConnection={activeConnection}
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onConnectionChange={handleConnectionChange}
-        onRunQuery={handleRunQuery}
-        onNewTab={handleNewTab}
-        onCloseTab={handleCloseTab}
-        onTabChange={handleTabChange}
-        onOpenConnectionManager={() => setShowConnectionManager(true)}
-        queryLimit={queryLimit}
-        onQueryLimitChange={setQueryLimit}
-        setActiveView={setActiveView}
-      />
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
@@ -372,9 +356,22 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
           isResizing={sidebarResize.isResizing}
         />
 
-        {/* Main Panel */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Editor Toolbar */}
+          <TopBar
+            connections={connections}
+            activeConnection={activeConnection}
+            tabs={tabs}
+            activeTabId={activeTabId}
+            onConnectionChange={handleConnectionChange}
+            onRunQuery={handleRunQuery}
+            onNewTab={handleNewTab}
+            onCloseTab={handleCloseTab}
+            onTabChange={handleTabChange}
+            onOpenConnectionManager={() => setShowConnectionManager(true)}
+            queryLimit={queryLimit}
+            onQueryLimitChange={setQueryLimit}
+            setActiveView={setActiveView}
+          />
           <EditorToolbar
             onRunQuery={handleRunQuery}
             onFormatQuery={handleFormatQuery}

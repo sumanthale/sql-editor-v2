@@ -1,19 +1,10 @@
-import React, { useRef } from 'react';
-import { 
-  Download, 
-  Upload, 
-  Copy, 
-  Trash2, 
-  Code, 
-  Zap,
-  RotateCcw
-} from 'lucide-react';
+import React, { useRef } from "react";
+import { Upload, Trash2, Code, RotateCcw, Save, Play, Search } from "lucide-react";
 
 interface EditorToolbarProps {
   onRunQuery: () => void;
   onFormatQuery: () => void;
   onClearQuery: () => void;
-  onCopyQuery: () => void;
   onExportQuery: () => void;
   onImportQuery: (content: string) => void;
   isConnected: boolean;
@@ -24,11 +15,10 @@ export function EditorToolbar({
   onRunQuery,
   onFormatQuery,
   onClearQuery,
-  onCopyQuery,
   onExportQuery,
   onImportQuery,
   isConnected,
-  isLoading
+  isLoading,
 }: EditorToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -48,7 +38,7 @@ export function EditorToolbar({
     }
     // Reset the input
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -59,6 +49,7 @@ export function EditorToolbar({
         <button
           onClick={onRunQuery}
           disabled={!isConnected || isLoading}
+          title={"Run Ctrl+Enter"}
           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed text-white rounded-lg text-xs font-semibold transition-all duration-200 shadow-md hover:shadow-lg disabled:shadow-none transform hover:scale-105 disabled:transform-none"
         >
           {isLoading ? (
@@ -68,12 +59,29 @@ export function EditorToolbar({
             </>
           ) : (
             <>
-              <Zap size={14} />
-              Run Query
+              <Play size={14} />
+              Run
             </>
           )}
         </button>
-
+        <button
+          onClick={onRunQuery}
+          disabled={!isConnected || isLoading}
+          title={"Run Ctrl+Enter"}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed text-white rounded-lg text-xs font-semibold transition-all duration-200 shadow-md hover:shadow-lg disabled:shadow-none transform hover:scale-105 disabled:transform-none"
+        >
+          {isLoading ? (
+            <>
+              <RotateCcw size={14} className="animate-spin" />
+              Running...
+            </>
+          ) : (
+            <>
+              <Search size={14} />
+              Explain
+            </>
+          )}
+        </button>
         <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
 
         <button
@@ -82,16 +90,6 @@ export function EditorToolbar({
           title="Format SQL (Ctrl+Shift+F)"
         >
           <Code size={14} />
-          Format
-        </button>
-
-        <button
-          onClick={onCopyQuery}
-          className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-medium transition-all duration-200"
-          title="Copy to Clipboard"
-        >
-          <Copy size={14} />
-          Copy
         </button>
 
         <button
@@ -100,7 +98,6 @@ export function EditorToolbar({
           title="Clear Editor"
         >
           <Trash2 size={14} />
-          Clear
         </button>
       </div>
 
@@ -113,8 +110,7 @@ export function EditorToolbar({
           className="flex items-center  gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-medium transition-all duration-200"
           title="Export Query"
         >
-          <Download size={14} />
-          Export
+          <Save size={14} />
         </button>
 
         <button
@@ -123,9 +119,14 @@ export function EditorToolbar({
           title="Import Query"
         >
           <Upload size={14} />
-          Import
         </button>
-
+        <button
+          onClick={handleImportClick}
+          className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg text-xs font-medium transition-all duration-200"
+          title="Import Query"
+        >
+          <Upload size={14} />
+        </button>
         <input
           ref={fileInputRef}
           type="file"
@@ -134,15 +135,17 @@ export function EditorToolbar({
           className="hidden"
         />
       </div>
-
-      {/* Keyboard Shortcuts Info */}
       <div className="hidden  ml-auto lg:flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
         <div className="flex items-center gap-1">
-          <kbd className="px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-xs">Ctrl+Enter</kbd>
+          <kbd className="px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-xs">
+            Ctrl+Enter
+          </kbd>
           <span>Run</span>
         </div>
         <div className="flex items-center gap-1">
-          <kbd className="px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-xs">Ctrl+Shift+F</kbd>
+          <kbd className="px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-xs">
+            Ctrl+Shift+F
+          </kbd>
           <span>Format</span>
         </div>
       </div>

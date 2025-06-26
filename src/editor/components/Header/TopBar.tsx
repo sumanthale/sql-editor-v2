@@ -6,9 +6,7 @@ import {
   ChevronDown,
   X,
   Activity,
-  Database,
-  Home,
-  DatabaseZap,
+  LogOut,
 } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
 import { DatabaseConnection, SqlTab } from "../../../types/database";
@@ -58,74 +56,87 @@ export function TopBar({
   };
 
   return (
-    <div className="h-16 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border-slate-200/60 dark:border-slate-700/60 px-4 sm:px-6 flex items-center justify-between gap-6 shadow-sm border-b-4">
-      <button
-        onClick={() => setActiveView("connections")}
-        className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-      >
-        <DatabaseZap size={24} />
-      </button>
+    <div className="h-14 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between shadow-sm border-b-4 px-2 gap-2">
       {/* Left: Logo + Tabs */}
-      <div className="flex items-center gap-4 flex-1 overflow-hidden ">
-        {/* Logo */}
-        <img
-          src="https://www.synchrony.com/syc/img/2023_synchrony_basic_logo.svg"
-          alt="Synchrony Logo"
-          className="h-10 w-auto cursor-pointer"
-          onClick={() => setActiveView("connections")}
-        />
 
-        {/* Tab List */}
-        {/* a divider */}
-        <div className="border-l border-slate-200 dark:border-slate-700 h-10 mx-2" />
-
-        <div
-          ref={scrollContainerRef}
-          className="flex items-center gap-2 overflow-x-auto scrollbar-hide no-scroll flex-1"
+      {tabs.length >= 8 && (
+        <button
+          onClick={() => {
+            if (scrollContainerRef.current) {
+              scrollContainerRef.current.scrollBy({
+                left: -150,
+                behavior: "smooth",
+              });
+            }
+          }}
+          className="z-10  p-1 bg-slate-200 dark:bg-slate-800"
         >
-          {tabs.map((tab) => (
-            <div
-              key={tab.id}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm cursor-pointer transition-all whitespace-nowrap ${
-                tab.isActive
-                  ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow"
-                  : "bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
-              }`}
-              onClick={() => onTabChange(tab.id)}
-            >
-              <span className="font-medium">{tab.title}</span>
-              {tab.isDirty && (
-                <div className="w-2 h-2 bg-orange-400 rounded-full" />
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCloseTab(tab.id);
-                }}
-                className={`hover:bg-black/10 rounded p-1 transition-colors ${
-                  tab.isActive ? "text-white/80 hover:text-white" : ""
-                }`}
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-
-          {/* + Button */}
-          <button
-            onClick={handleNewTab}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-            title="New Tab"
+          <ChevronDown
+            className="rotate-90 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition"
+            size={18}
+          />
+        </button>
+      )}
+      <div
+        ref={scrollContainerRef}
+        className="flex items-center  gap-2 overflow-x-auto scrollbar-hide no-scroll flex-1"
+      >
+        {tabs.map((tab) => (
+          <div
+            key={tab.id}
+            className={`flex items-center gap-2 px-2 py-1 rounded-md text-sm cursor-pointer transition-all whitespace-nowrap ${
+              tab.isActive
+                ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow"
+                : "bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
+            }`}
+            onClick={() => onTabChange(tab.id)}
           >
-            <Plus size={16} />
-          </button>
-        </div>
+            <span className="font-medium">{tab.title}</span>
+            {tab.isDirty && (
+              <div className="w-2 h-2 bg-orange-400 rounded-full" />
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCloseTab(tab.id);
+              }}
+              className={`hover:bg-black/10 rounded p-1 transition-colors ${
+                tab.isActive ? "text-white/80 hover:text-white" : ""
+              }`}
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={handleNewTab}
+          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+          title="New Tab"
+        >
+          <Plus size={16} />
+        </button>
       </div>
-
+      {tabs.length >= 8 && (
+        <button
+          onClick={() => {
+            if (scrollContainerRef.current) {
+              scrollContainerRef.current.scrollBy({
+                left: 150,
+                behavior: "smooth",
+              });
+            }
+          }}
+          className="z-10  p-1 bg-slate-200 dark:bg-slate-800"
+        >
+          <ChevronDown
+            className="-rotate-90 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition"
+            size={18}
+          />
+        </button>
+      )}
       {/* Right: Actions */}
       <div className="flex items-center gap-3">
-        {/* Query Limit Dropdown */}
-        <div className="relative">
+        <div className="relative hidden">
           <button
             onClick={() => setShowLimitDropdown(!showLimitDropdown)}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-md text-slate-600 dark:text-slate-300 transition"
@@ -165,6 +176,13 @@ export function TopBar({
           className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
         >
           {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+        </button>
+
+        <button
+          onClick={() => setActiveView("connections")}
+          className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+        >
+          <LogOut size={18} />
         </button>
       </div>
     </div>
