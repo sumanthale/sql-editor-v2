@@ -325,14 +325,6 @@ export function SqlEditor({
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       onRunQuery();
     });
-
-    // Format SQL shortcut
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
-      () => {
-        editor.getAction("editor.action.formatDocument").run();
-      }
-    );
   };
 
   // Update theme dynamically when it changes

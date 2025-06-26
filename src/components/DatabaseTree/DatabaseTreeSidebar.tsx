@@ -194,7 +194,7 @@ export const DatabaseTreeSidebar: React.FC = () => {
             />
             <input
               type="text"
-              placeholder="Filter objects"
+              placeholder="Search tables, views, functions..."
               value={searchQuery}
               onChange={handleSearchChange}
               onFocus={() => setIsSearchFocused(true)}

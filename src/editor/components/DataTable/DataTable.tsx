@@ -7,6 +7,8 @@ import {
   SortDesc,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Database,
   Download,
   FileText,
@@ -34,25 +36,27 @@ interface DataTableProps {
   emptyMessage?: string;
   pageSize?: number;
   showPagination?: boolean;
-  onRowClick?: (row: any) => void;
   className?: string;
 }
+
+const PAGE_SIZE_OPTIONS = [5, 25, 50, 75, 100];
 
 export function DataTable({
   currentResult,
   loading = false,
   emptyMessage = "No data available",
-  pageSize = 50,
+  pageSize: initialPageSize = 50,
   showPagination = true,
-  onRowClick,
   className = "",
 }: DataTableProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [globalFilter, setGlobalFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [scale, setScale] = useState(1);
-  const handleZoomIn = () => setScale((prev) => Math.min(prev + 0.1, 2));
-  const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.1, 0.5));
+
+  const handleZoomIn = () => setScale((prev) => Math.min(prev + 0.1, 1.4));
+  const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.1, 0.6));
 
   const data = currentResult.rows;
 
@@ -242,6 +246,8 @@ export function DataTable({
   }, [sortedData, currentPage, pageSize, showPagination]);
 
   const totalPages = Math.ceil(sortedData.length / pageSize);
+  const startRecord = (currentPage - 1) * pageSize + 1;
+  const endRecord = Math.min(currentPage * pageSize, sortedData.length);
 
   // Handle sorting
   const handleSort = useCallback((columnKey: string) => {
@@ -257,6 +263,36 @@ export function DataTable({
       }
     });
   }, []);
+
+  // Handle page size change
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page
+  };
+
+  // Pagination navigation functions
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToLastPage = () => setCurrentPage(totalPages);
+  const goToPrevPage = () => setCurrentPage(Math.max(1, currentPage - 1));
+  const goToNextPage = () =>
+    setCurrentPage(Math.min(totalPages, currentPage + 1));
+  const goToPage = (page: number) =>
+    setCurrentPage(Math.max(1, Math.min(totalPages, page)));
+
+  // Generate page numbers for pagination
+  const getVisiblePages = () => {
+    const maxVisible = 5;
+    const half = Math.floor(maxVisible / 2);
+
+    let start = Math.max(1, currentPage - half);
+    let end = Math.min(totalPages, start + maxVisible - 1);
+
+    if (end - start < maxVisible - 1) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  };
 
   // Get sort indicator for column
   const getSortIndicator = (columnKey: string) => {
@@ -372,30 +408,27 @@ export function DataTable({
             </button>
 
             {/* Global Search */}
-
-            {scale < 1.2 && (
-              <div className="relative">
-                <Search
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={globalFilter}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="pl-8 pr-8 py-1 text-xs w-44 sm:w-56 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-white"
-                />
-                {globalFilter && (
-                  <button
-                    onClick={() => setGlobalFilter("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-            )}
+            <div className="relative">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="pl-8 pr-8 py-1 text-xs w-44 sm:w-56 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-white"
+              />
+              {globalFilter && (
+                <button
+                  onClick={() => setGlobalFilter("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -458,10 +491,7 @@ export function DataTable({
               {paginatedData.map((row, index) => (
                 <tr
                   key={index}
-                  className={`transition-all duration-150 border hover:bg-slate-50 dark:hover:bg-slate-700 ${
-                    onRowClick ? "cursor-pointer" : ""
-                  }`}
-                  onClick={() => onRowClick?.(row)}
+                  className={`transition-all duration-150 border hover:bg-slate-50 dark:hover:bg-slate-700`}
                 >
                   {columns.map((column) => (
                     <td
@@ -493,61 +523,132 @@ export function DataTable({
         )}
       </div>
 
-      {/* Pagination */}
-      {showPagination && totalPages > 1 && (
-        <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-white/80 dark:from-slate-800/80 dark:to-slate-700/80 backdrop-blur-sm rounded-b-xl text-xs text-slate-600 dark:text-slate-400">
-          {/* Results Range Text */}
-          <span>
-            Showing {(currentPage - 1) * pageSize + 1}–
-            {Math.min(currentPage * pageSize, sortedData.length)} of{" "}
-            {sortedData.length}
-          </span>
+      {/* Enhanced Pagination */}
+      {showPagination && totalPages > 0 && (
+        <div className="px-3 py-1 border-t border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50/80 to-white/80 dark:from-slate-800/80 dark:to-slate-700/80 backdrop-blur-sm rounded-b-xl">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            {/* Left: Results info and page size selector */}
+            <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+              <span>
+                Showing {startRecord}–{endRecord} of {sortedData.length}
+              </span>
 
-          {/* Pagination Controls */}
-          <div className="flex items-center gap-1">
-            {/* Prev Button */}
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-2 py-1 rounded-md transition-all font-medium flex items-center gap-1
-          bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600
-          disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft size={12} />
-            </button>
-
-            {/* Page Numbers (max 5) */}
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const pageNum =
-                Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                  className={`px-2 py-1 rounded-md text-xs font-semibold transition-all
-              ${
-                currentPage === pageNum
-                  ? "bg-blue-600 text-white shadow"
-                  : "bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
-              }`}
+              {/* Page Size Selector */}
+              <div className="flex items-center gap-2">
+                <span>Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                  className="px-2 py-1 text-xs bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {pageNum}
-                </button>
-              );
-            })}
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-            {/* Next Button */}
-            <button
-              onClick={() =>
-                setCurrentPage(Math.min(totalPages, currentPage + 1))
-              }
-              disabled={currentPage === totalPages}
-              className="px-2 py-1 rounded-md transition-all font-medium flex items-center gap-1
-          bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600
-          disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ChevronRight size={12} />
-            </button>
+            {/* Right: Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                {/* First Page */}
+                <button
+                  onClick={goToFirstPage}
+                  disabled={currentPage === 1}
+                  title="First page"
+                  className="p-1 rounded-md transition-all text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronsLeft size={14} />
+                </button>
+
+                {/* Previous Page */}
+                <button
+                  onClick={goToPrevPage}
+                  disabled={currentPage === 1}
+                  title="Previous page"
+                  className="p-1 rounded-md transition-all text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+
+                {/* Page Numbers */}
+                <div className="flex items-center gap-1 mx-2">
+                  {getVisiblePages().map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      onClick={() => goToPage(pageNum)}
+                      className={`px-2 py-1 min-w-[28px] text-xs font-semibold rounded-md transition-all ${
+                        currentPage === pageNum
+                          ? "bg-blue-600 text-white shadow"
+                          : "bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+
+                  {/* Show ellipsis and last page if needed */}
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <>
+                      {currentPage < totalPages - 3 && (
+                        <span className="px-1 text-slate-400">...</span>
+                      )}
+                      <button
+                        onClick={() => goToPage(totalPages)}
+                        className="px-2 py-1 min-w-[28px] text-xs font-semibold rounded-md transition-all bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Next Page */}
+                <button
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                  title="Next page"
+                  className="p-1 rounded-md transition-all text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight size={14} />
+                </button>
+
+                {/* Last Page */}
+                <button
+                  onClick={goToLastPage}
+                  disabled={currentPage === totalPages}
+                  title="Last page"
+                  className="p-1 rounded-md transition-all text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronsRight size={14} />
+                </button>
+
+                {/* Page Input */}
+                <div className="flex items-center gap-2 ml-4 text-xs">
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Go to:
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={currentPage}
+                    onChange={(e) => {
+                      const page = parseInt(e.target.value);
+                      if (!isNaN(page)) {
+                        goToPage(page);
+                      }
+                    }}
+                    className="px-2 py-1 w-16 text-xs text-center bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-slate-600 dark:text-slate-400">
+                    of {totalPages}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

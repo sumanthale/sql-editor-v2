@@ -3,6 +3,7 @@ import { Upload, Trash2, Code, RotateCcw, Save, Play, Search } from "lucide-reac
 
 interface EditorToolbarProps {
   onRunQuery: () => void;
+  onRunExplain: () => void;
   onFormatQuery: () => void;
   onClearQuery: () => void;
   onExportQuery: () => void;
@@ -13,6 +14,7 @@ interface EditorToolbarProps {
 
 export function EditorToolbar({
   onRunQuery,
+  onRunExplain,
   onFormatQuery,
   onClearQuery,
   onExportQuery,
@@ -65,7 +67,7 @@ export function EditorToolbar({
           )}
         </button>
         <button
-          onClick={onRunQuery}
+          onClick={onRunExplain}
           disabled={!isConnected || isLoading}
           title={"Run Ctrl+Enter"}
           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed text-white rounded-lg text-xs font-semibold transition-all duration-200 shadow-md hover:shadow-lg disabled:shadow-none transform hover:scale-105 disabled:transform-none"

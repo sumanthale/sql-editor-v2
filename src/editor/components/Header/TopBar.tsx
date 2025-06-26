@@ -18,7 +18,6 @@ interface TopBarProps {
   tabs: SqlTab[];
   activeTabId: string | null;
   onConnectionChange: (connection: DatabaseConnection) => void;
-  onRunQuery: () => void;
   onNewTab: () => void;
   onCloseTab: (tabId: string) => void;
   onTabChange: (tabId: string) => void;

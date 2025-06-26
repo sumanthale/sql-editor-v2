@@ -13,7 +13,7 @@ import {
   mockQueryResults,
 } from "../data/mockData";
 import { format } from "sql-formatter";
-
+let TAB_COUNT = 1;
 interface EditorProps {
   setActiveView: (view: "connections" | "migration") => void;
 }
@@ -28,7 +28,8 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
     {
       id: "tab-1",
       title: "Query 1",
-      content: "SELECT * FROM users WHERE created_at > '2024-01-01' LIMIT 10;",
+      content:
+        "CREATE OR REPLACE FUNCTION calculate_total_sales() RETURNS DECIMAL AS $$ BEGIN RETURN (SELECT SUM(total_amount) FROM orders WHERE status = 'completed'); END; $$ LANGUAGE plpgsql;",
       isActive: true,
       isDirty: false,
     },
@@ -216,12 +217,164 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
     setIsQueryLoading(false);
     setLastQueryExecuted(new Date());
   }, [tabs, activeTabId, activeConnection]);
+  const handleRunExplain = useCallback(async () => {
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    if (!activeTab || !activeConnection?.isConnected) return;
+
+    setIsQueryLoading(true);
+
+    // Simulate query execution
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Generate mock results based on query content
+    const query = activeTab.content.toLowerCase().trim();
+    
+    let mockResult: QueryResult;
+
+    if (query.includes("select") && query.includes("users")) {
+      mockResult = mockQueryResults[0];
+    } else if (query.includes("select") && query.includes("orders")) {
+      mockResult = {
+        columns: [
+          { name: "id", type: "integer" },
+          { name: "user_id", type: "integer" },
+          { name: "total_amount", type: "decimal" },
+          { name: "status", type: "varchar" },
+          { name: "order_date", type: "date" },
+          { name: "created_at", type: "timestamp" },
+        ],
+        rows: [
+          {
+            id: 1,
+            user_id: 1,
+            total_amount: 99.99,
+            status: "completed",
+            order_date: "2024-01-20",
+            created_at: "2024-01-20T10:30:00Z",
+          },
+          {
+            id: 2,
+            user_id: 2,
+            total_amount: 149.5,
+            status: "pending",
+            order_date: "2024-01-20",
+            created_at: "2024-01-20T11:15:00Z",
+          },
+          {
+            id: 3,
+            user_id: 1,
+            total_amount: 75.25,
+            status: "completed",
+            order_date: "2024-01-20",
+            created_at: "2024-01-20T14:22:00Z",
+          },
+          {
+            id: 4,
+            user_id: 3,
+            total_amount: 200.0,
+            status: "shipped",
+            order_date: "2024-01-20",
+            created_at: "2024-01-20T16:45:00Z",
+          },
+          {
+            id: 5,
+            user_id: 2,
+            total_amount: 89.99,
+            status: "completed",
+            order_date: "2024-01-21",
+            created_at: "2024-01-21T09:30:00Z",
+          },
+        ],
+        totalRows: 5,
+        executionTime: Math.floor(Math.random() * 100) + 20,
+        query: activeTab.content,
+        timestamp: new Date(),
+      };
+    } else if (query.includes("select") && query.includes("products")) {
+      mockResult = {
+        columns: [
+          { name: "id", type: "integer" },
+          { name: "name", type: "varchar" },
+          { name: "price", type: "decimal" },
+          { name: "category_id", type: "integer" },
+          { name: "in_stock", type: "boolean" },
+          { name: "stock_quantity", type: "integer" },
+          { name: "created_at", type: "timestamp" },
+        ],
+        rows: [
+          {
+            id: 1,
+            name: "Laptop Pro",
+            price: 1299.99,
+            category_id: 1,
+            in_stock: true,
+            stock_quantity: 15,
+            created_at: "2024-01-15T10:00:00Z",
+          },
+          {
+            id: 2,
+            name: "Wireless Mouse",
+            price: 29.99,
+            category_id: 2,
+            in_stock: true,
+            stock_quantity: 50,
+            created_at: "2024-01-15T10:30:00Z",
+          },
+          {
+            id: 3,
+            name: "Mechanical Keyboard",
+            price: 149.99,
+            category_id: 2,
+            in_stock: false,
+            stock_quantity: 0,
+            created_at: "2024-01-15T11:00:00Z",
+          },
+          {
+            id: 4,
+            name: "Monitor 4K",
+            price: 399.99,
+            category_id: 3,
+            in_stock: true,
+            stock_quantity: 8,
+            created_at: "2024-01-15T11:30:00Z",
+          },
+          {
+            id: 5,
+            name: "USB-C Hub",
+            price: 79.99,
+            category_id: 2,
+            in_stock: true,
+            stock_quantity: 25,
+            created_at: "2024-01-15T12:00:00Z",
+          },
+        ],
+        totalRows: 5,
+        executionTime: Math.floor(Math.random() * 100) + 20,
+        query: activeTab.content,
+        timestamp: new Date(),
+      };
+    } else {
+      // Default empty result for non-SELECT queries or unknown tables
+      mockResult = {
+        columns: [],
+        rows: [],
+        totalRows: 0,
+        executionTime: Math.floor(Math.random() * 50) + 10,
+        query: activeTab.content,
+        timestamp: new Date(),
+      };
+    }
+
+    setQueryResults([mockResult]);
+    setIsQueryLoading(false);
+    setLastQueryExecuted(new Date());
+  }, [tabs, activeTabId, activeConnection]);
 
   const handleNewTab = useCallback(() => {
     const newTabId = `tab-${Date.now()}`;
     const newTab: SqlTab = {
       id: newTabId,
-      title: `Query ${tabs.length + 1}`,
+      title: `Query ${++TAB_COUNT}`,
       content: "",
       isActive: false,
       isDirty: false,
@@ -233,7 +386,7 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
         .concat({ ...newTab, isActive: true })
     );
     setActiveTabId(newTabId);
-  }, [tabs.length]);
+  }, []);
 
   const handleCloseTab = useCallback(
     (tabId: string) => {
@@ -277,22 +430,78 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
 
   // Editor toolbar handlers
   const handleFormatQuery = useCallback(() => {
-    // This would typically format the SQL query
     const activeTab = tabs.find((t) => t.id === activeTabId);
-    if (activeTab) {
-      const unformatted = activeTab.content; // Replace with actual formatting logic;
+    if (activeTab && activeTab.content.trim()) {
+      try {
+        // First try with postgresql dialect
+        const formatted = format(activeTab.content, {
+          language: "postgresql",
+          keywordCase: "upper",
+          identifierCase: "lower",
+          indentStyle: "standard",
+          logicalOperatorNewline: "before",
+          expressionWidth: 50,
+          linesBetweenQueries: 2,
+        });
 
-      const formatted = format(unformatted, {
-        language: "sql", // "mysql", "postgresql", "sqlite", etc.
-      });
+        setTabs((prev) =>
+          prev.map((t) =>
+            t.id === activeTabId
+              ? { ...t, content: formatted, isDirty: true }
+              : t
+          )
+        );
+      } catch (error) {
+        console.error("Error formatting SQL:", error);
 
-      setTabs((prev) =>
-        prev.map((t) =>
-          t.id === activeTabId ? { ...t, content: formatted, isDirty: true } : t
-        )
-      );
+        // Fallback: Try with generic SQL
+        try {
+          const formatted = format(activeTab.content, {
+            language: "sql",
+            keywordCase: "upper",
+            identifierCase: "lower",
+          });
+
+          setTabs((prev) =>
+            prev.map((t) =>
+              t.id === activeTabId
+                ? { ...t, content: formatted, isDirty: true }
+                : t
+            )
+          );
+        } catch (fallbackError) {
+          console.log(fallbackError);
+
+          // Basic manual formatting for PostgreSQL functions
+          const basicFormatted = activeTab.content
+            .replace(
+              /CREATE\s+OR\s+REPLACE\s+FUNCTION/gi,
+              "CREATE OR REPLACE FUNCTION"
+            )
+            .replace(/RETURNS\s+([^A-Z\s]+)/gi, "\n  RETURNS $1")
+            .replace(/AS\s+\$\$/gi, "\nAS $")
+            .replace(/BEGIN(?!\s+RETURN)/gi, "\nBEGIN")
+            .replace(/RETURN\s+/gi, "\n  RETURN ")
+            .replace(/END;\s*\$\$/gi, "\nEND;\n$")
+            .replace(/LANGUAGE\s+/gi, "\nLANGUAGE ")
+            .replace(/;(\s*)$/gi, ";")
+            .trim();
+
+          setTabs((prev) =>
+            prev.map((t) =>
+              t.id === activeTabId
+                ? { ...t, content: basicFormatted, isDirty: true }
+                : t
+            )
+          );
+
+          console.warn(
+            "Used basic formatting fallback for PostgreSQL function"
+          );
+        }
+      }
     }
-  }, []);
+  }, [tabs, activeTabId]);
 
   const handleClearQuery = useCallback(() => {
     setTabs((prev) =>
@@ -301,13 +510,6 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
       )
     );
   }, [activeTabId]);
-
-  const handleCopyQuery = useCallback(() => {
-    const activeTab = tabs.find((t) => t.id === activeTabId);
-    if (activeTab) {
-      navigator.clipboard.writeText(activeTab.content);
-    }
-  }, [tabs, activeTabId]);
 
   const handleExportQuery = useCallback(() => {
     const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -363,7 +565,6 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
             tabs={tabs}
             activeTabId={activeTabId}
             onConnectionChange={handleConnectionChange}
-            onRunQuery={handleRunQuery}
             onNewTab={handleNewTab}
             onCloseTab={handleCloseTab}
             onTabChange={handleTabChange}
@@ -374,9 +575,9 @@ const Editor: React.FC<EditorProps> = ({ setActiveView }) => {
           />
           <EditorToolbar
             onRunQuery={handleRunQuery}
+            onRunExplain={handleRunExplain}
             onFormatQuery={handleFormatQuery}
             onClearQuery={handleClearQuery}
-            onCopyQuery={handleCopyQuery}
             onExportQuery={handleExportQuery}
             onImportQuery={handleImportQuery}
             isConnected={activeConnection?.isConnected || false}

@@ -1,8 +1,4 @@
-import {
-  Database,
-  RotateCcw,
-  CheckCircle2,
-} from "lucide-react";
+import { Database, RotateCcw, CheckCircle2 } from "lucide-react";
 import { DataTable } from "../DataTable/DataTable";
 import { QueryResult } from "../../../types/database";
 
@@ -15,6 +11,7 @@ interface QueryResultsProps {
 export function QueryResults({
   results,
   isLoading,
+  lastExecuted,
 }: QueryResultsProps) {
   const currentResult = results[0]; // Show the most recent query result
 
@@ -41,7 +38,6 @@ export function QueryResults({
 
   return (
     <div className="h-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-t border-slate-200/60 dark:border-slate-700/60 flex flex-col">
-
       <div className="flex-1 overflow-hidden">
         {!currentResult ? (
           <div className="h-full flex items-center justify-center">
@@ -58,6 +54,11 @@ export function QueryResults({
               <p className="text-sm text-slate-400 dark:text-slate-500">
                 Use Ctrl+Enter to execute your query
               </p>
+              {lastExecuted && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                  Last executed: {lastExecuted.toLocaleString()}
+                </p>
+              )}
             </div>
           </div>
         ) : currentResult.rows.length === 0 ? (
@@ -77,6 +78,17 @@ export function QueryResults({
                   {currentResult.query}
                 </p>
               </div>
+              {currentResult.executionTime && (
+                <div className="mt-3 flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span>Executed in {currentResult.executionTime}ms</span>
+                  {lastExecuted && (
+                    <>
+                      <span>•</span>
+                      <span>{lastExecuted.toLocaleString()}</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -85,7 +97,7 @@ export function QueryResults({
               currentResult={currentResult}
               loading={false}
               emptyMessage="No data returned from query"
-              pageSize={1}
+              pageSize={50}
               showPagination={true}
               className="h-full border-0 rounded-none bg-transparent"
             />
